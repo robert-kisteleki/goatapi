@@ -170,7 +170,7 @@ be run by any user.
 
 (C) 2022, [Robert Kisteleki](https://kistel.eu/) & [RIPE NCC](https://www.ripe.net)
 
-Contribution is possible and encouraged via the [Github repo]("https://github.com/robert-kisteleki/goatapi/")
+Contribution is possible and encouraged via the [Github repo](https://github.com/robert-kisteleki/goatapi/)
 
 # License
 
