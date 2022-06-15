@@ -36,7 +36,7 @@ type Anchor struct {
 	Location        Geolocation `json:"geometry"`
 	Type            string      `json:"type"`
 	TLSARecord      string      `json:"tlsa_record"`
-	LiveSince       *uniTime    `json:"date_live"`
+	LiveSince       *isoTime    `json:"date_live"`
 	HardwareVersion int         `json:"hardware_version"`
 }
 

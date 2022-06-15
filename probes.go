@@ -27,15 +27,15 @@ type Probe struct {
 	ASN6           *int          `json:"asn_v6"`
 	CountryCode    string        `json:"country_code"`
 	Description    string        `json:"description"`
-	FirstConnected *uniTime      `json:"first_connected"`
-	LastConnected  *uniTime      `json:"last_connected"`
+	FirstConnected *isoTime      `json:"first_connected"`
+	LastConnected  *isoTime      `json:"last_connected"`
 	Location       Geolocation   `json:"geometry"`
 	Anchor         bool          `json:"is_anchor"`
 	Prefix4        *netip.Prefix `json:"prefix_v4"`
 	Prefix6        *netip.Prefix `json:"prefix_v6"`
 	Public         bool          `json:"is_public"`
 	Status         ProbeStatus   `json:"status"`
-	StatusSince    uniTime       `json:"status_since"`
+	StatusSince    isoTime       `json:"status_since"`
 	TotalUptime    int           `json:"total_uptime"`
 	Type           string        `json:"type"`
 	Tags           []Tag         `json:"tags"`
@@ -66,7 +66,7 @@ var ProbeStatusDict = map[int]string{
 type ProbeStatus struct {
 	ID    int      `json:"id"`
 	Name  string   `json:"name"`
-	Since *uniTime `json:"since"`
+	Since *isoTime `json:"since"`
 }
 
 // ShortString produces a short textual description of the probe
@@ -133,6 +133,7 @@ type ProbeFilter struct {
 func NewProbeFilter() ProbeFilter {
 	filter := ProbeFilter{}
 	filter.params = url.Values{}
+	filter.params.Add("format[datetime]", "iso-8601")
 	return filter
 }
 

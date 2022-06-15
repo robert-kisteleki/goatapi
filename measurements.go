@@ -23,9 +23,9 @@ import (
 // Measurement object, as it comes from the API
 type Measurement struct {
 	ID               int                `json:"id"`
-	CreationTime     int                `json:"creation_time"`
-	StartTime        uniTime            `json:"start_time"`
-	StopTime         *uniTime           `json:"stop_time"`
+	CreationTime     isoTime            `json:"creation_time"`
+	StartTime        isoTime            `json:"start_time"`
+	StopTime         *isoTime           `json:"stop_time"`
 	Status           MeasurementStatus  `json:"status"`
 	GroupID          *int               `json:"group_id"`
 	ResolvedIPs      *[]netip.Addr      `json:"resolved_ips"`
@@ -112,7 +112,7 @@ var MeasurementOneoffDict = map[bool]string{
 type MeasurementStatus struct {
 	ID    int      `json:"id"`
 	Name  string   `json:"name"`
-	Since *uniTime `json:"when"`
+	Since *isoTime `json:"when"`
 }
 
 // ShortString produces a short textual description of the measurement
@@ -179,6 +179,7 @@ func NewMeasurementFilter() MeasurementFilter {
 	filter := MeasurementFilter{}
 	filter.params = url.Values{}
 	filter.params.Add("optional_fields", "probes")
+	filter.params.Add("format[datetime]", "iso-8601")
 	return filter
 }
 
