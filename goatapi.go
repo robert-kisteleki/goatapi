@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const version = "v0.1.0"
+const version = "v0.2.0-dev"
 
 var uaString = "goatAPI " + version
 var apiBaseURL = "https://atlas.ripe.net/api/v2/"
@@ -35,6 +35,6 @@ func SetAPIBase(newAPIBaseURL string) {
 }
 
 // Turn a slice of ints to a comma CSV string
-func makeCsv(list []int) string {
+func makeCsv(list []uint) string {
 	return strings.Trim(strings.Join(strings.Fields(fmt.Sprint(list)), ","), "[]")
 }

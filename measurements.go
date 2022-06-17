@@ -22,39 +22,39 @@ import (
 
 // Measurement object, as it comes from the API
 type Measurement struct {
-	ID               int                `json:"id"`
-	CreationTime     isoTime            `json:"creation_time"`
-	StartTime        isoTime            `json:"start_time"`
-	StopTime         *isoTime           `json:"stop_time"`
+	ID               uint               `json:"id"`
+	CreationTime     uniTime            `json:"creation_time"`
+	StartTime        uniTime            `json:"start_time"`
+	StopTime         *uniTime           `json:"stop_time"`
 	Status           MeasurementStatus  `json:"status"`
-	GroupID          *int               `json:"group_id"`
+	GroupID          *uint              `json:"group_id"`
 	ResolvedIPs      *[]netip.Addr      `json:"resolved_ips"`
 	Description      *string            `json:"description"`
 	Type             string             `json:"type"`
 	Target           string             `json:"target"`
-	TargetASN        *int               `json:"target_asn"`
+	TargetASN        *uint              `json:"target_asn"`
 	TargetIP         netip.Addr         `json:"target_ip"`
 	TargetPrefix     *netip.Prefix      `json:"target_prefix"`
 	InWifiGroup      bool               `json:"in_wifi_group"`
-	AddressFamily    *int               `json:"af"`
+	AddressFamily    *uint              `json:"af"`
 	AllScheduled     bool               `json:"is_all_scheduled"`
-	Interval         *int               `json:"interval"`
-	Spread           *int               `json:"spread"`
+	Interval         *uint              `json:"interval"`
+	Spread           *uint              `json:"spread"`
 	OneOff           bool               `json:"is_oneoff"`
 	Public           bool               `json:"is_public"`
 	ResolveOnProbe   bool               `json:"resolve_on_probe"`
-	ParticipantCount *int               `json:"participant_count"`
-	ProbesRequested  *int               `json:"probes_requested"`
-	ProbesScheduled  *int               `json:"probes_scheduled"`
-	CreditsPerResult int                `json:"credits_per_result"`
-	ResultsPerDay    int                `json:"estimated_results_per_day"`
+	ParticipantCount *uint              `json:"participant_count"`
+	ProbesRequested  *uint              `json:"probes_requested"`
+	ProbesScheduled  *uint              `json:"probes_scheduled"`
+	CreditsPerResult uint               `json:"credits_per_result"`
+	ResultsPerDay    uint               `json:"estimated_results_per_day"`
 	Probes           []ParticipantProbe `json:"probes"`
 	Tags             []string           `json:"tags"`
 }
 
 // ParticipantProbe - only the ID though
 type ParticipantProbe struct {
-	ID int `json:"id"`
+	ID uint `json:"id"`
 }
 
 // MeasurementListSortOrders lists all the allowed sort orders
@@ -90,7 +90,7 @@ const (
 )
 
 // MeasurementStatusDict maps the measurement status codes to human readable descriptions
-var MeasurementStatusDict = map[int]string{
+var MeasurementStatusDict = map[uint]string{
 	MeasurementStatusSpecified:        "Specified",
 	MeasurementStatusScheduled:        "Scheduled",
 	MeasurementStatusOngoing:          "Ongoing",
@@ -110,9 +110,9 @@ var MeasurementOneoffDict = map[bool]string{
 
 // MeasurementStatus as defined by the API
 type MeasurementStatus struct {
-	ID    int      `json:"id"`
+	ID    uint     `json:"id"`
 	Name  string   `json:"name"`
-	Since *isoTime `json:"when"`
+	Since *uniTime `json:"when"`
 }
 
 // ShortString produces a short textual description of the measurement
@@ -146,7 +146,7 @@ func (measurement *Measurement) LongString() string {
 
 	text += appendValueOrNA("", true, measurement.Description)
 
-	var idlist []int
+	var idlist []uint
 	for _, probe := range measurement.Probes {
 		idlist = append(idlist, probe.ID)
 	}
@@ -159,7 +159,7 @@ func (measurement *Measurement) LongString() string {
 
 // the API paginates; this describes one such page
 type measurementListingPage struct {
-	Count        int           `json:"count"`
+	Count        uint          `json:"count"`
 	Next         string        `json:"next"`
 	Previous     string        `json:"previous"`
 	Measurements []Measurement `json:"results"`
@@ -168,8 +168,8 @@ type measurementListingPage struct {
 // MeasurementFilter struct holds specified filters and other options
 type MeasurementFilter struct {
 	params url.Values
-	id     int
-	limit  int
+	id     uint
+	limit  uint
 	key    *uuid.UUID
 	my     bool
 }
@@ -184,7 +184,7 @@ func NewMeasurementFilter() MeasurementFilter {
 }
 
 // FilterID filters by a particular measurement ID
-func (filter *MeasurementFilter) FilterID(id int) {
+func (filter *MeasurementFilter) FilterID(id uint) {
 	filter.id = id
 }
 
@@ -194,52 +194,52 @@ func (filter *MeasurementFilter) FilterMy() {
 }
 
 // FilterIDGt filters for msm IDs > some number
-func (filter *MeasurementFilter) FilterIDGt(n int) {
+func (filter *MeasurementFilter) FilterIDGt(n uint) {
 	filter.params.Add("id__gt", fmt.Sprint(n))
 }
 
 // FilterIDGte filters for msm IDs >= some number
-func (filter *MeasurementFilter) FilterIDGte(n int) {
+func (filter *MeasurementFilter) FilterIDGte(n uint) {
 	filter.params.Add("id__gte", fmt.Sprint(n))
 }
 
 // FilterIDLt filters for msm IDs < some number
-func (filter *MeasurementFilter) FilterIDLt(n int) {
+func (filter *MeasurementFilter) FilterIDLt(n uint) {
 	filter.params.Add("id__lt", fmt.Sprint(n))
 }
 
 // FilterIDLt filters for msm IDs <= some number
-func (filter *MeasurementFilter) FilterIDLte(n int) {
+func (filter *MeasurementFilter) FilterIDLte(n uint) {
 	filter.params.Add("id__lte", fmt.Sprint(n))
 }
 
 // FilterIDin filters for measurement ID being one of several in the list specified
-func (filter *MeasurementFilter) FilterIDin(list []int) {
+func (filter *MeasurementFilter) FilterIDin(list []uint) {
 	filter.params.Add("id__in", makeCsv(list))
 }
 
 // FilterInterval filters for measurement interval being a specific number (seconds)
-func (filter *MeasurementFilter) FilterInterval(n int) {
+func (filter *MeasurementFilter) FilterInterval(n uint) {
 	filter.params.Add("interval", fmt.Sprint(n))
 }
 
 // FilterIntervalGt filters for measurement interval being > a specific number (seconds)
-func (filter *MeasurementFilter) FilterIntervalGt(n int) {
+func (filter *MeasurementFilter) FilterIntervalGt(n uint) {
 	filter.params.Add("interval__gt", fmt.Sprint(n))
 }
 
 // FilterIntervalGte filters for measurement interval being >= a specific number (seconds)
-func (filter *MeasurementFilter) FilterIntervalGte(n int) {
+func (filter *MeasurementFilter) FilterIntervalGte(n uint) {
 	filter.params.Add("interval__gte", fmt.Sprint(n))
 }
 
 // FilterIntervalLt filters for measurement interval being < a specific number (seconds)
-func (filter *MeasurementFilter) FilterIntervalLt(n int) {
+func (filter *MeasurementFilter) FilterIntervalLt(n uint) {
 	filter.params.Add("interval__lt", fmt.Sprint(n))
 }
 
 // FilterIntervalLte filters for measurement interval being <= a specific number (seconds)
-func (filter *MeasurementFilter) FilterIntervalLte(n int) {
+func (filter *MeasurementFilter) FilterIntervalLte(n uint) {
 	filter.params.Add("interval__lte", fmt.Sprint(n))
 }
 
@@ -285,13 +285,13 @@ func (filter *MeasurementFilter) FilterStoptimeLte(t time.Time) {
 
 // FilterStatus filters for measurements that have a specific status
 // See: const MeasurementStatusSpecified*
-func (filter *MeasurementFilter) FilterStatus(n int) {
+func (filter *MeasurementFilter) FilterStatus(n uint) {
 	filter.params.Add("status", fmt.Sprint(n))
 }
 
 // FilterStatusIn filters for measurements that are in a set of statuses
 // See: const MeasurementStatusSpecified*
-func (filter *MeasurementFilter) FilterStatusIn(list []int) {
+func (filter *MeasurementFilter) FilterStatusIn(list []uint) {
 	filter.params.Add("status__in", makeCsv(list))
 }
 
@@ -342,7 +342,7 @@ func (filter *MeasurementFilter) FilterType(typ string) {
 }
 
 // FilterProbe filters for measurements that have a particular probe participating in them
-func (filter *MeasurementFilter) FilterProbe(id int) {
+func (filter *MeasurementFilter) FilterProbe(id uint) {
 	filter.params.Add("current_probes", fmt.Sprint(id))
 }
 
@@ -369,7 +369,7 @@ func (filter *MeasurementFilter) FilterDescriptionEndsWith(what string) {
 
 // FilterAddressFamily filters for measurements using a particular address family
 // 4 for IPv4, 6 for IPv6
-func (filter *MeasurementFilter) FilterAddressFamily(af int) {
+func (filter *MeasurementFilter) FilterAddressFamily(af uint) {
 	filter.params.Add("af", fmt.Sprint(af))
 }
 
@@ -386,7 +386,7 @@ func (filter *MeasurementFilter) Sort(by string) {
 }
 
 // Limit limits the number of result retrieved
-func (filter *MeasurementFilter) Limit(limit int) {
+func (filter *MeasurementFilter) Limit(limit uint) {
 	filter.limit = limit
 }
 
@@ -434,13 +434,6 @@ func (filter *MeasurementFilter) verifyFilters() error {
 		}
 	}
 
-	if filter.limit < 0 {
-		return fmt.Errorf("limit must not be negative")
-	}
-	if filter.id < 0 {
-		return fmt.Errorf("ID must not be negative")
-	}
-
 	// 'my' needs and API key
 	if filter.my && filter.key == nil {
 		return fmt.Errorf("'my' needs an API key")
@@ -453,7 +446,7 @@ func (filter *MeasurementFilter) verifyFilters() error {
 func (filter *MeasurementFilter) GetMeasurementCount(
 	verbose bool,
 ) (
-	count int,
+	count uint,
 	err error,
 ) {
 	// sanity checks - late in the process, but not too late
@@ -580,14 +573,14 @@ func (filter *MeasurementFilter) GetMeasurements(
 		}
 
 		// add elements to the list while observing the limit
-		if filter.limit != 0 && len(measurements)+len(page.Measurements) > filter.limit {
-			measurements = append(measurements, page.Measurements[:filter.limit-len(measurements)]...)
+		if filter.limit != 0 && uint(len(measurements)+len(page.Measurements)) > filter.limit {
+			measurements = append(measurements, page.Measurements[:filter.limit-uint(len(measurements))]...)
 		} else {
 			measurements = append(measurements, page.Measurements...)
 		}
 
 		// no next page or got to exactly the limit => we're done
-		if page.Next == "" || len(measurements) == filter.limit {
+		if page.Next == "" || uint(len(measurements)) == filter.limit {
 			break
 		}
 
@@ -609,7 +602,7 @@ func (filter *MeasurementFilter) GetMeasurements(
 // returns nil, err on error
 func GetMeasurement(
 	verbose bool,
-	id int,
+	id uint,
 ) (
 	*Measurement,
 	error,

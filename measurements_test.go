@@ -15,19 +15,6 @@ func TestMeasurementFilterValidator(t *testing.T) {
 	var err error
 	var filter MeasurementFilter
 
-	filter = NewMeasurementFilter()
-	filter.FilterID(-1)
-	err = filter.verifyFilters()
-	if err == nil {
-		t.Error("ID filter cannot be negative")
-	}
-	filter = NewMeasurementFilter()
-	filter.FilterID(1)
-	err = filter.verifyFilters()
-	if err != nil {
-		t.Error("Correct ID filter is not allowed?")
-	}
-
 	badtag := "*"
 	goodtag := "ooo"
 	filter = NewMeasurementFilter()
@@ -76,12 +63,5 @@ func TestMeasurementFilterValidator(t *testing.T) {
 	err = filter.verifyFilters()
 	if err == nil {
 		t.Error("Sort order is not filtered properly")
-	}
-
-	filter = NewMeasurementFilter()
-	filter.Limit(-1)
-	err = filter.verifyFilters()
-	if err == nil {
-		t.Error("Limit can be negative")
 	}
 }
