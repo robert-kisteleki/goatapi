@@ -122,13 +122,13 @@ func (measurement *Measurement) ShortString() string {
 		MeasurementStatusDict[measurement.Status.ID],
 		MeasurementOneoffDict[measurement.OneOff],
 	)
-	text += appendValueOrNA("IPv", false, measurement.AddressFamily)
+	text += valueOrNA("IPv", false, measurement.AddressFamily)
 
-	text += appendValueOrNA("", false, &measurement.StartTime)
-	text += appendValueOrNA("", false, measurement.StopTime)
+	text += valueOrNA("", false, &measurement.StartTime)
+	text += valueOrNA("", false, measurement.StopTime)
 
-	text += appendValueOrNA("", false, measurement.Interval)
-	text += appendValueOrNA("", false, measurement.ParticipantCount)
+	text += valueOrNA("", false, measurement.Interval)
+	text += valueOrNA("", false, measurement.ParticipantCount)
 
 	text += fmt.Sprintf("\t%s", measurement.Type)
 	if measurement.Target != "" {
@@ -144,7 +144,7 @@ func (measurement *Measurement) ShortString() string {
 func (measurement *Measurement) LongString() string {
 	text := measurement.ShortString()
 
-	text += appendValueOrNA("", true, measurement.Description)
+	text += valueOrNA("", true, measurement.Description)
 
 	var idlist []uint
 	for _, probe := range measurement.Probes {

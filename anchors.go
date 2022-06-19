@@ -66,8 +66,8 @@ func (anchor *Anchor) ShortString() string {
 		anchor.FQDN,
 	)
 
-	text += appendValueOrNA("AS", false, anchor.ASN4)
-	text += appendValueOrNA("AS", false, anchor.ASN6)
+	text += valueOrNA("AS", false, anchor.ASN4)
+	text += valueOrNA("AS", false, anchor.ASN6)
 	text += fmt.Sprintf("\t%v", anchor.Location.Coordinates)
 
 	return text
@@ -77,8 +77,8 @@ func (anchor *Anchor) ShortString() string {
 func (anchor *Anchor) LongString() string {
 	text := anchor.ShortString()
 
-	text += appendValueOrNA("", false, anchor.Address4)
-	text += appendValueOrNA("", false, anchor.Address6)
+	text += valueOrNA("", false, anchor.Address4)
+	text += valueOrNA("", false, anchor.Address6)
 	if anchor.NicHandle != "" {
 		text += "\t" + anchor.NicHandle
 	} else {

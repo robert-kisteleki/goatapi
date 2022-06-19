@@ -38,9 +38,9 @@ type ErrorDetail struct {
 	Code   int    `json:"code"`
 }
 
-// appendValueOrNA turns various types into a string if they have values
-// (i.e. pinter is not nil) or "N/A" otherwise
-func appendValueOrNA[T any](prefix string, quote bool, val *T) string {
+// valueOrNA turns various types into a string if they have values
+// (i.e. pointer is not nil) or "N/A" otherwise
+func valueOrNA[T any](prefix string, quote bool, val *T) string {
 	if val != nil {
 		if quote {
 			return fmt.Sprintf("\t\"%s%v\"", prefix, *val)
@@ -77,5 +77,5 @@ func (ut *uniTime) UnmarshalJSON(data []byte) error {
 
 // default output format for uniTime type is ISO8601
 func (ut uniTime) String() string {
-	return time.Time(ut).Format("2006-01-02T15:04:05Z")
+	return time.Time(ut).UTC().Format(time.RFC3339)
 }

@@ -79,8 +79,8 @@ func (probe *Probe) ShortString() string {
 		text += "\tN/A"
 	}
 
-	text += appendValueOrNA("AS", false, probe.ASN4)
-	text += appendValueOrNA("AS", false, probe.ASN6)
+	text += valueOrNA("AS", false, probe.ASN4)
+	text += valueOrNA("AS", false, probe.ASN6)
 
 	text += fmt.Sprintf("\t%v", probe.Location.Coordinates)
 
@@ -97,12 +97,12 @@ func (probe *Probe) ShortString() string {
 func (probe *Probe) LongString() string {
 	text := probe.ShortString()
 
-	text += appendValueOrNA("", false, probe.Address4)
-	text += appendValueOrNA("", false, probe.Prefix4)
-	text += appendValueOrNA("", false, probe.Address6)
-	text += appendValueOrNA("", false, probe.Prefix6)
-	text += appendValueOrNA("", false, probe.FirstConnected)
-	text += appendValueOrNA("", false, probe.LastConnected)
+	text += valueOrNA("", false, probe.Address4)
+	text += valueOrNA("", false, probe.Prefix4)
+	text += valueOrNA("", false, probe.Address6)
+	text += valueOrNA("", false, probe.Prefix6)
+	text += valueOrNA("", false, probe.FirstConnected)
+	text += valueOrNA("", false, probe.LastConnected)
 	text += fmt.Sprintf(" %d %v %v", probe.TotalUptime, probe.Anchor, probe.Public)
 
 	tags := make([]string, 0)
