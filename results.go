@@ -86,33 +86,10 @@ func (filter *ResultsFilter) GetResults(
 	results []result.Result,
 	err error,
 ) {
-	// sanity checks - late in the process, but not too late
-	err = filter.verifyFilters()
-	if err != nil {
-		return
-	}
-
-	query := fmt.Sprintf("%smeasurements/%d/results/?%s", apiBaseURL, filter.id, filter.params.Encode())
-
-	req, err := http.NewRequest("GET", query, nil)
+	read, err := filter.openResults(verbose)
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", uaString)
-
-	if verbose {
-		fmt.Printf("API call: GET %s\n", req.URL)
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	// we're reading one result per line, a scanner is simple enough
-	read := bufio.NewScanner(bufio.NewReader(resp.Body))
 
 	var fetched uint = 0
 	typehint := ""
@@ -133,4 +110,71 @@ func (filter *ResultsFilter) GetResults(
 	}
 
 	return results, nil
+}
+
+// GetResults returns results via a channel by applying all the specified filters
+func (filter *ResultsFilter) GetResultsAsync(
+	verbose bool,
+	results chan result.AsyncResult,
+) {
+	defer close(results)
+
+	read, err := filter.openResults(verbose)
+	if err != nil {
+		results <- result.AsyncResult{Result: nil, Error: err}
+		return
+	}
+
+	var fetched uint = 0
+	typehint := ""
+	for read.Scan() && fetched < filter.limit {
+		line := read.Text()
+
+		res, err := result.ParseWithTypeHint(line, typehint)
+		if err != nil {
+			results <- result.AsyncResult{Result: nil, Error: err}
+		}
+
+		results <- result.AsyncResult{Result: res, Error: nil}
+
+		fetched++
+
+		if typehint == "" {
+			typehint = res.TypeName()
+		}
+	}
+}
+
+func (filter *ResultsFilter) openResults(
+	verbose bool,
+) (
+	read *bufio.Scanner,
+	err error,
+) {
+	// sanity checks - late in the process, but not too late
+	err = filter.verifyFilters()
+	if err != nil {
+		return nil, err
+	}
+
+	query := fmt.Sprintf("%smeasurements/%d/results/?%s", apiBaseURL, filter.id, filter.params.Encode())
+
+	req, err := http.NewRequest("GET", query, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", uaString)
+
+	if verbose {
+		fmt.Printf("API call: GET %s\n", req.URL)
+	}
+
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	// we're reading one result per line, a scanner is simple enough
+	return bufio.NewScanner(bufio.NewReader(resp.Body)), nil
 }

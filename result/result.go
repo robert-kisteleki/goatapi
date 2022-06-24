@@ -20,6 +20,11 @@ type Result interface {
 	LongString() string
 }
 
+type AsyncResult struct {
+	Result Result
+	Error  error
+}
+
 func Parse(from string) (Result, error) {
 	var res Result = &BaseResult{}
 	err := res.Parse(from)
