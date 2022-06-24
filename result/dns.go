@@ -44,8 +44,23 @@ type DnsAnswer struct {
 	QueriesCount    uint    `json:"qdcount"` //
 	NameServerCount uint    `json:"nscount"` //
 	AdditionalCount uint    `json:"arcount"` //
-	//Answers         *[]DnsDetail `json:"answers"` //
+	//Detail         *[]DnsDetail `json:"answers"` //
 	//TTL6            *uint        `json:"ttl"`     //
+}
+
+func (answer *DnsAnswer) ShortString() string {
+	ret := fmt.Sprintf("%d\t%d\t%d\t%d",
+		answer.AnswerCount,
+		answer.QueriesCount,
+		answer.NameServerCount,
+		answer.AdditionalCount,
+	)
+	return ret
+}
+
+func (answer *DnsAnswer) LongString() string {
+	ret := answer.ShortString() + fmt.Sprintf("\t%s", answer.Abuf)
+	return ret
 }
 
 type DnsDetail struct {
@@ -64,14 +79,7 @@ type DnsError struct {
 }
 
 func (result *DnsResult) ShortString() string {
-	ret := fmt.Sprintf("%d\t%d\t%v\t%v",
-		result.MeasurementID,
-		result.ProbeID,
-		result.TimeStamp,
-		valueOrNA("", true, result.DestinationAddr),
-	)
-
-	return ret
+	return result.BaseShortString()
 }
 
 func (result *DnsResult) LongString() string {
@@ -106,4 +114,16 @@ func (result *DnsReply) QBuf() ([]byte, error) {
 	}
 
 	return decoded, nil
+}
+
+func (result *DnsResult) Answers() (answers []DnsAnswer) {
+	if result.RawResult != nil {
+		answers = append(answers, *result.RawResult)
+	}
+	if result.RawResultSet != nil {
+		for _, rs := range result.RawResultSet {
+			answers = append(answers, rs.Answer)
+		}
+	}
+	return answers
 }

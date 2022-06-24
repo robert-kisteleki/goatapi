@@ -37,22 +37,18 @@ type PingReply struct {
 }
 
 func (result *PingResult) ShortString() string {
-	ret := fmt.Sprintf("%d\t%d\t%v\t%v\t%d/%d/%d\t%f/%f/%f",
-		result.MeasurementID,
-		result.ProbeID,
-		result.TimeStamp.String(),
-		result.DestinationAddr,
-		result.Sent, result.Received, result.Duplicates,
-		result.Min, result.Avg, result.Max,
-	)
+	ret := result.BaseShortString() +
+		fmt.Sprintf("\t%d/%d/%d\t%f/%f/%f",
+			result.Sent, result.Received, result.Duplicates,
+			result.Min, result.Avg, result.Max,
+		)
 
 	return ret
 }
 
 func (result *PingResult) LongString() string {
 	return result.ShortString() +
-		"\t" + result.Protocol +
-		fmt.Sprintf("\t%v", result.ReplyRTTs())
+		fmt.Sprintf("\t%s\t%v", result.Protocol, result.ReplyRTTs())
 }
 
 func (result *PingResult) TypeName() string {

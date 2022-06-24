@@ -41,19 +41,26 @@ func (result *BaseResult) Parse(from string) (err error) {
 }
 
 func (result *BaseResult) ShortString() string {
-	ret := fmt.Sprintf("%d\t%d\t%v\t%v",
+	ret := fmt.Sprintf("%d\t%d\t%v",
 		result.MeasurementID,
 		result.ProbeID,
 		result.TimeStamp,
-		valueOrNA("", true, result.DestinationAddr),
 	)
-
+	ret += valueOrNA("", true, result.DestinationAddr)
 	return ret
 }
 
 func (result *BaseResult) LongString() string {
-	return result.ShortString() +
+	return result.BaseLongString() +
 		fmt.Sprintf("\t%d", result.AddressFamily)
+}
+
+func (result *BaseResult) BaseShortString() string {
+	return result.ShortString()
+}
+
+func (result *BaseResult) BaseLongString() string {
+	return result.LongString()
 }
 
 func (result *BaseResult) TypeName() string {
