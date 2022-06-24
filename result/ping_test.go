@@ -109,7 +109,7 @@ func TestMedian(t *testing.T) {
 	list = []float64{}
 	_, err := median(list)
 	if err == nil {
-		t.Errorf("median calculation of emty list should return error")
+		t.Errorf("median calculation of empty list should return error")
 	}
 
 	list = []float64{10, 40, 30, 20}
