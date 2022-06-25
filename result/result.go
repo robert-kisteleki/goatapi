@@ -45,6 +45,9 @@ func ParseWithTypeHint(from string, typehint string) (Result, error) {
 	case "dns":
 		dnsres := DnsResult{}
 		res = &dnsres
+	case "ntp":
+		ntpres := NtpResult{}
+		res = &ntpres
 	default:
 		return nil, fmt.Errorf("unknown/unsupported result type %s", typehint)
 	}
