@@ -30,9 +30,9 @@ type PingResult struct {
 
 // one successful ping reply; there are at most Sent ones in a ping result
 type PingReply struct {
-	RTT       float64
+	Rtt       float64
 	Source    *netip.Addr
-	TTL       uint
+	Ttl       uint
 	Duplicate bool
 }
 
@@ -48,7 +48,7 @@ func (result *PingResult) ShortString() string {
 
 func (result *PingResult) LongString() string {
 	return result.ShortString() +
-		fmt.Sprintf("\t%s\t%v", result.Protocol, result.ReplyRTTs())
+		fmt.Sprintf("\t%s\t%v", result.Protocol, result.ReplyRtts())
 }
 
 func (result *PingResult) TypeName() string {
@@ -72,7 +72,7 @@ func (result *PingResult) Replies() ([]PingReply, error) {
 		mapitem := item.(map[string]any)
 		if rtt, ok := mapitem["rtt"]; ok {
 			// fill in other fields of a reply struct
-			pr := PingReply{RTT: rtt.(float64)}
+			pr := PingReply{Rtt: rtt.(float64)}
 			if src, ok := mapitem["src_addr"]; ok {
 				src, err := netip.ParseAddr(src.(string))
 				if err != nil {
@@ -83,9 +83,9 @@ func (result *PingResult) Replies() ([]PingReply, error) {
 				pr.Source = result.DestinationAddr // TODO: is this correct?
 			}
 			if ttl, ok := mapitem["ttl"]; ok {
-				pr.TTL = ttl.(uint)
+				pr.Ttl = ttl.(uint)
 			} else {
-				pr.TTL = *result.TTL
+				pr.Ttl = *result.TTL
 			}
 			_, pr.Duplicate = mapitem["dup"]
 
@@ -95,7 +95,7 @@ func (result *PingResult) Replies() ([]PingReply, error) {
 	return r, nil
 }
 
-func (result *PingResult) ReplyRTTs() []float64 {
+func (result *PingResult) ReplyRtts() []float64 {
 	r := make([]float64, 0)
 	for _, item := range result.RawResult {
 		mapitem := item.(map[string]any)
@@ -129,7 +129,7 @@ func (result *PingResult) Timeouts() int {
 }
 
 func (result *PingResult) MedianRTT() (float64, error) {
-	vals := result.ReplyRTTs()
+	vals := result.ReplyRtts()
 	return median(vals)
 }
 

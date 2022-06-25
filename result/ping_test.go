@@ -92,7 +92,7 @@ func TestProbeParser(t *testing.T) {
 	}
 	rtts := make([]float64, 0)
 	for _, reply := range replies {
-		rtts = append(rtts, reply.RTT)
+		rtts = append(rtts, reply.Rtt)
 	}
 	assertEqual(t, fmt.Sprint(rtts), "[10 15 4.75 5.25 25]", "error parsing RTTs")
 	med, _ := ping.MedianRTT()
