@@ -48,6 +48,9 @@ func ParseWithTypeHint(from string, typehint string) (Result, error) {
 	case "ntp":
 		ntpres := NtpResult{}
 		res = &ntpres
+	case "sslcert":
+		certres := CertResult{}
+		res = &certres
 	default:
 		return nil, fmt.Errorf("unknown/unsupported result type %s", typehint)
 	}
