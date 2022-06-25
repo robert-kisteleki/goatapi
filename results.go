@@ -79,13 +79,14 @@ func (filter *ResultsFilter) verifyFilters() error {
 	return nil
 }
 
-// GetResults returns a set of results by applying all the specified filters
+// GetResults returns results in a slice by applying the specified filters
 func (filter *ResultsFilter) GetResults(
 	verbose bool,
 ) (
 	results []result.Result,
 	err error,
 ) {
+	// prepare to read results
 	read, err := filter.openResults(verbose)
 	if err != nil {
 		return nil, err
@@ -100,10 +101,13 @@ func (filter *ResultsFilter) GetResults(
 		if err != nil {
 			return results, err
 		}
+
+		// add the result to the result set
 		results = append(results, res)
 
 		fetched++
 
+		// a type hint makes parsing much faster
 		if typehint == "" {
 			typehint = res.TypeName()
 		}
@@ -112,13 +116,14 @@ func (filter *ResultsFilter) GetResults(
 	return results, nil
 }
 
-// GetResults returns results via a channel by applying all the specified filters
+// GetResults returns results via a channel by applying the specified filters
 func (filter *ResultsFilter) GetResultsAsync(
 	verbose bool,
 	results chan result.AsyncResult,
 ) {
 	defer close(results)
 
+	// prepare to read results
 	read, err := filter.openResults(verbose)
 	if err != nil {
 		results <- result.AsyncResult{Result: nil, Error: err}
@@ -133,18 +138,22 @@ func (filter *ResultsFilter) GetResultsAsync(
 		res, err := result.ParseWithTypeHint(line, typehint)
 		if err != nil {
 			results <- result.AsyncResult{Result: nil, Error: err}
+			continue
 		}
 
+		// put the result on the channel
 		results <- result.AsyncResult{Result: res, Error: nil}
 
 		fetched++
 
+		// a type hint makes parsing much faster
 		if typehint == "" {
 			typehint = res.TypeName()
 		}
 	}
 }
 
+// prepare fecthing results, i.e. verify paramters, connect to the API, etc.
 func (filter *ResultsFilter) openResults(
 	verbose bool,
 ) (
