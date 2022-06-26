@@ -41,12 +41,13 @@ func (result *BaseResult) Parse(from string) (err error) {
 }
 
 func (result *BaseResult) ShortString() string {
-	ret := fmt.Sprintf("%d\t%d\t%v",
+	ret := fmt.Sprintf("%d\t%d\t%v\t%s",
 		result.MeasurementID,
 		result.ProbeID,
 		result.TimeStamp,
+		result.DestinationName,
 	)
-	ret += valueOrNA("", true, result.DestinationAddr)
+	ret += valueOrNA("", false, result.DestinationAddr)
 	return ret
 }
 

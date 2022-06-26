@@ -51,6 +51,9 @@ func ParseWithTypeHint(from string, typehint string) (Result, error) {
 	case "sslcert":
 		certres := CertResult{}
 		res = &certres
+	case "http":
+		httpres := HttpResult{}
+		res = &httpres
 	default:
 		return nil, fmt.Errorf("unknown/unsupported result type %s", typehint)
 	}
