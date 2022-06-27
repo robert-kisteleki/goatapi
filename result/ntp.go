@@ -48,8 +48,8 @@ func (result *NtpReply) String() string {
 	)
 }
 
-func (result *NtpResult) ShortString() string {
-	ret := result.BaseShortString() +
+func (result *NtpResult) String() string {
+	ret := result.BaseString() +
 		fmt.Sprintf("\t%s\t%d\t%d\t%d",
 			result.ReferenceID, result.Stratum, len(result.Replies()), len(result.Errors()),
 		)
@@ -57,7 +57,7 @@ func (result *NtpResult) ShortString() string {
 }
 
 func (result *NtpResult) LongString() string {
-	return result.ShortString() +
+	return result.String() +
 		fmt.Sprintf("\t%s\t%v", result.Protocol, result.Replies())
 }
 

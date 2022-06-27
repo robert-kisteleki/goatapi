@@ -44,14 +44,14 @@ type HttpReadTiming struct {
 	TimeSince uint `json:"t"` //
 }
 
-func (result *HttpResult) ShortString() string {
-	ret := result.BaseShortString() +
+func (result *HttpResult) String() string {
+	ret := result.BaseString() +
 		fmt.Sprintf("\t%s", result.Uri)
 	return ret
 }
 
-func (result *HttpResult) LongString() string {
-	res := result.ShortString() +
+func (result *HttpResult) DetailString() string {
+	res := result.String() +
 		fmt.Sprintf("\t%d", len(result.RawHttpReply))
 	res += "\t["
 	for _, answer := range result.RawHttpReply {

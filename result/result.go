@@ -16,8 +16,8 @@ import (
 type Result interface {
 	Parse(from string) (err error)
 	TypeName() string
-	ShortString() string
-	LongString() string
+	String() string
+	DetailString() string
 }
 
 type AsyncResult struct {

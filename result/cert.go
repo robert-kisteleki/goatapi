@@ -34,7 +34,7 @@ type CertAlert struct {
 
 func (result *CertResult) ShortString() string {
 	certs, _ := result.Certificates()
-	ret := result.BaseShortString() +
+	ret := result.BaseString() +
 		valueOrNA("", false, result.Error) +
 		valueOrNA("", false, result.Method) +
 		valueOrNA("", false, result.ProtocolVersion) +

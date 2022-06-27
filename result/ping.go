@@ -36,8 +36,8 @@ type PingReply struct {
 	Duplicate bool
 }
 
-func (result *PingResult) ShortString() string {
-	ret := result.BaseShortString() +
+func (result *PingResult) String() string {
+	ret := result.BaseString() +
 		fmt.Sprintf("\t%d/%d/%d\t%f/%f/%f",
 			result.Sent, result.Received, result.Duplicates,
 			result.Min, result.Avg, result.Max,
@@ -46,8 +46,8 @@ func (result *PingResult) ShortString() string {
 	return ret
 }
 
-func (result *PingResult) LongString() string {
-	return result.ShortString() +
+func (result *PingResult) DetailString() string {
+	return result.String() +
 		fmt.Sprintf("\t%s\t%v", result.Protocol, result.ReplyRtts())
 }
 

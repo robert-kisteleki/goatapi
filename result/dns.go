@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/netip"
+	"strings"
 )
 
 type DnsResult struct {
@@ -36,19 +37,19 @@ type DnsReply struct {
 }
 
 type DnsAnswer struct {
-	ResponseTime    float64 `json:"rt"`      //
-	ResponseSize    uint    `json:"size"`    //
-	Abuf            string  `json:"abuf"`    //
-	ID              uint    `json:"id"`      //
-	AnswerCount     uint    `json:"ancount"` //
-	QueriesCount    uint    `json:"qdcount"` //
-	NameServerCount uint    `json:"nscount"` //
-	AdditionalCount uint    `json:"arcount"` //
-	//Detail         *[]DnsDetail `json:"answers"` //
+	ResponseTime    float64      `json:"rt"`      //
+	ResponseSize    uint         `json:"size"`    //
+	Abuf            string       `json:"abuf"`    //
+	ID              uint         `json:"id"`      //
+	AnswerCount     uint         `json:"ancount"` //
+	QueriesCount    uint         `json:"qdcount"` //
+	NameServerCount uint         `json:"nscount"` //
+	AdditionalCount uint         `json:"arcount"` //
+	Details         *[]DnsDetail `json:"answers"` //
 	//TTL6            *uint        `json:"ttl"`     //
 }
 
-func (answer *DnsAnswer) ShortString() string {
+func (answer *DnsAnswer) String() string {
 	ret := fmt.Sprintf("%d\t%d\t%d\t%d",
 		answer.AnswerCount,
 		answer.QueriesCount,
@@ -58,9 +59,17 @@ func (answer *DnsAnswer) ShortString() string {
 	return ret
 }
 
-func (answer *DnsAnswer) LongString() string {
-	ret := answer.ShortString() + fmt.Sprintf("\t%s", answer.Abuf)
-	return ret
+func (answer *DnsAnswer) DetailString() string {
+	res := answer.String() + "\t["
+	if answer.Details != nil {
+		s := make([]string, 0)
+		for _, detail := range *answer.Details {
+			s = append(s, detail.DetailString())
+		}
+		res += strings.Join(s, " ")
+	}
+	res += "]"
+	return res
 }
 
 type DnsDetail struct {
@@ -69,8 +78,12 @@ type DnsDetail struct {
 	RData      string `json:"rdata"`
 	RName      string `json:"rname"`
 	Serial     uint   `json:"serial"`
-	TTL        uint   `json:"ttl"`
+	Ttl        uint   `json:"ttl"`
 	Type       string `json:"type"`
+}
+
+func (detail *DnsDetail) DetailString() string {
+	return fmt.Sprintf("%s %s %d", detail.Type, detail.RName, detail.Serial)
 }
 
 type DnsError struct {
@@ -78,14 +91,20 @@ type DnsError struct {
 	AddrInfo string `json:"getaddrinfo"`
 }
 
-func (result *DnsResult) ShortString() string {
-	return result.BaseShortString()
+func (result *DnsResult) String() string {
+	return result.BaseString() +
+		"\t" + fmt.Sprint(len(result.Answers()))
 }
 
-func (result *DnsResult) LongString() string {
-	return result.ShortString() +
-		"\t" + fmt.Sprint(result.RawResult) +
-		"\t" + fmt.Sprint(result.RawResultSet)
+func (result *DnsResult) DetailString() string {
+	res := result.String() + "\t["
+	s := make([]string, 0)
+	for _, ans := range result.Answers() {
+		s = append(s, ans.DetailString())
+	}
+	res += strings.Join(s, " ")
+	res += "]"
+	return res
 }
 
 func (result *DnsResult) TypeName() string {
