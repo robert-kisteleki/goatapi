@@ -15,32 +15,61 @@ import (
 
 type PingResult struct {
 	BaseResult
-	Min        float64 `json:"min"`    // -1 if N/A
-	Avg        float64 `json:"avg"`    // -1 if N/A
-	Max        float64 `json:"max"`    // -1 if N/A
-	Sent       uint    `json:"sent"`   //
-	Received   uint    `json:"rcvd"`   //
-	Duplicates uint    `json:"dup"`    //
-	Size       uint    `json:"size"`   //
-	Protocol   string  `json:"proto"`  //
-	TTL        *uint   `json:"ttl"`    //
-	Step       uint    `json:"step"`   //
-	RawResult  []any   `json:"result"` //
+	Sent, Received, Duplicates        uint        //
+	Minimum, Average, Median, Maximum float64     // -1 if N/A
+	PacketSize                        uint        //
+	Protocol                          string      //
+	Step                              *uint       //
+	Ttl                               uint        //
+	Replies                           []PingReply //
+	Errors                            []string    //
+	Timeouts                          uint        //
 }
 
-// one successful ping reply; there are at most Sent ones in a ping result
+// one successful ping reply
 type PingReply struct {
 	Rtt       float64
-	Source    *netip.Addr
+	Source    netip.Addr
 	Ttl       uint
 	Duplicate bool
 }
 
+func (ping *PingResult) Parse(from string) (err error) {
+	var iping pingResult
+	err = json.Unmarshal([]byte(from), &iping)
+	if err != nil {
+		return err
+	}
+	if iping.Type != "ping" {
+		return fmt.Errorf("this is not a ping result (type=%s)", iping.Type)
+	}
+	ping.BaseResult = iping.BaseResult
+	ping.Replies = iping.Replies()
+	ping.Errors = iping.Errors()
+	ping.Timeouts = uint(iping.Timeouts())
+	ping.Minimum = iping.Minimum
+	ping.Average = iping.Average
+	ping.Maximum = iping.Maximum
+	ping.Sent = iping.Sent
+	ping.Received = iping.Received
+	ping.Duplicates = iping.Duplicates
+	ping.PacketSize = iping.PacketSize
+	ping.Protocol = iping.Protocol
+	ping.Step = iping.Step
+	ping.Ttl = *iping.Ttl
+	if len(ping.Replies) == 0 {
+		ping.Median = -1
+	} else {
+		ping.Median = median(ping.ReplyRtts())
+	}
+	return nil
+}
+
 func (result *PingResult) String() string {
 	ret := result.BaseString() +
-		fmt.Sprintf("\t%d/%d/%d\t%f/%f/%f",
+		fmt.Sprintf("\t%d/%d/%d\t%f/%f/%f/%f",
 			result.Sent, result.Received, result.Duplicates,
-			result.Min, result.Avg, result.Max,
+			result.Minimum, result.Average, result.Median, result.Maximum,
 		)
 
 	return ret
@@ -55,18 +84,36 @@ func (result *PingResult) TypeName() string {
 	return "ping"
 }
 
-func (ping *PingResult) Parse(from string) (err error) {
-	err = json.Unmarshal([]byte(from), &ping)
-	if err != nil {
-		return err
+func (result *PingResult) ReplyRtts() []float64 {
+	r := make([]float64, 0)
+	for _, item := range result.Replies {
+		r = append(r, item.Rtt)
 	}
-	if ping.Type != "ping" {
-		return fmt.Errorf("this is not a ping result (type=%s)", ping.Type)
-	}
-	return nil
+	return r
 }
 
-func (result *PingResult) Replies() ([]PingReply, error) {
+//////////////////////////////////////////////////////
+// internal representation of a ping result
+
+// this is the JSON structure as reported by the API
+type pingResult struct {
+	BaseResult
+	Minimum    float64 `json:"min"`    //
+	Average    float64 `json:"avg"`    //
+	Maximum    float64 `json:"max"`    //
+	Sent       uint    `json:"sent"`   //
+	Received   uint    `json:"rcvd"`   //
+	Duplicates uint    `json:"dup"`    //
+	PacketSize uint    `json:"size"`   //
+	Protocol   string  `json:"proto"`  //
+	Step       *uint   `json:"step"`   //
+	Ttl        *uint   `json:"ttl"`    //
+	RawResult  []any   `json:"result"` //
+}
+
+// parse replies in the result
+// ignore problems, i.e. IP addresses that don't look like IP addresses
+func (result *pingResult) Replies() []PingReply {
 	r := make([]PingReply, 0)
 	for _, item := range result.RawResult {
 		mapitem := item.(map[string]any)
@@ -75,38 +122,26 @@ func (result *PingResult) Replies() ([]PingReply, error) {
 			pr := PingReply{Rtt: rtt.(float64)}
 			if src, ok := mapitem["src_addr"]; ok {
 				src, err := netip.ParseAddr(src.(string))
-				if err != nil {
-					return r, err
+				if err == nil {
+					pr.Source = src
 				}
-				pr.Source = &src
 			} else {
-				pr.Source = result.DestinationAddr // TODO: is this correct?
+				pr.Source = *result.DestinationAddr // TODO: is this correct?
 			}
 			if ttl, ok := mapitem["ttl"]; ok {
 				pr.Ttl = ttl.(uint)
 			} else {
-				pr.Ttl = *result.TTL
+				pr.Ttl = *result.Ttl
 			}
 			_, pr.Duplicate = mapitem["dup"]
 
 			r = append(r, pr)
 		}
 	}
-	return r, nil
-}
-
-func (result *PingResult) ReplyRtts() []float64 {
-	r := make([]float64, 0)
-	for _, item := range result.RawResult {
-		mapitem := item.(map[string]any)
-		if rtt, ok := mapitem["rtt"]; ok {
-			r = append(r, rtt.(float64))
-		}
-	}
 	return r
 }
 
-func (result *PingResult) Errors() []string {
+func (result *pingResult) Errors() []string {
 	r := make([]string, 0)
 	for _, item := range result.RawResult {
 		mapitem := item.(map[string]any)
@@ -117,8 +152,8 @@ func (result *PingResult) Errors() []string {
 	return r
 }
 
-func (result *PingResult) Timeouts() int {
-	n := 0
+func (result *pingResult) Timeouts() uint {
+	var n uint = 0
 	for _, item := range result.RawResult {
 		mapitem := item.(map[string]any)
 		if _, ok := mapitem["x"]; ok {
@@ -128,23 +163,15 @@ func (result *PingResult) Timeouts() int {
 	return n
 }
 
-func (result *PingResult) MedianRTT() (float64, error) {
-	vals := result.ReplyRtts()
-	return median(vals)
-}
-
-func median(vals []float64) (float64, error) {
+func median(vals []float64) float64 {
 	n := len(vals)
-	if n == 0 {
-		return 0.0, fmt.Errorf("zero values")
-	}
 	slice := vals[:]
 	sort.Float64s(slice)
 
 	// follow the definition of median
 	if n%2 == 0 {
-		return (vals[n/2-1] + vals[n/2]) / 2, nil
+		return (vals[n/2-1] + vals[n/2]) / 2
 	} else {
-		return vals[n/2], nil
+		return vals[n/2]
 	}
 }

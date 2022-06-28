@@ -17,7 +17,8 @@ import (
 func TestProbeParser(t *testing.T) {
 	var ping PingResult
 	err := ping.Parse(`
-{"fw":5040,
+{
+"fw":5040,
 "mver":"2.4.1",
 "lts":20,
 "dst_name":"example.com",
@@ -67,12 +68,6 @@ func TestProbeParser(t *testing.T) {
 	assertEqual(t, ping.FromAddr, from, "error parsing ping field value for from")
 	assertEqual(t, *ping.ResolveTime, 1.234, "error parsing ping field value for ttr")
 	assertEqual(t, ping.AddressFamily, uint(4), "error parsing ping field value for af")
-	assertEqual(t, ping.Protocol, "ICMP", "error parsing ping field value for proto")
-	assertEqual(t, *ping.TTL, uint(54), "error parsing ping field value for ttl")
-	assertEqual(t, ping.Size, uint(64), "error parsing ping field value for size")
-	assertEqual(t, ping.Duplicates, uint(0), "error parsing ping field value for dup")
-	assertEqual(t, ping.Received, uint(4), "error parsing ping field value for rcvd")
-	assertEqual(t, ping.Sent, uint(4), "error parsing ping field value for sent")
 	assertEqual(t, ping.MeasurementID, uint(1234567), "error parsing ping field value for msm_id")
 	assertEqual(t, ping.ProbeID, uint(2345678), "error parsing ping field value for prb_id")
 	assertEqual(t, ping.GroupID, uint(34567890), "error parsing ping field value for group_id")
@@ -80,22 +75,25 @@ func TestProbeParser(t *testing.T) {
 	assertEqual(t, ping.StoreTimeStamp.String(), "2022-06-17T05:22:02Z", "error parsing ping field value for stored_timestamp")
 	assertEqual(t, ping.MeasurementName, "Ping", "error parsing ping field value for msm_name")
 	assertEqual(t, ping.Type, "ping", "error parsing ping field value for type")
-	assertEqual(t, ping.Step, uint(10), "error parsing ping field value for step")
+	assertEqual(t, *ping.Step, uint(10), "error parsing ping field value for step")
 
-	assertEqual(t, ping.Min, 4.75, "error parsing ping field value for min")
-	assertEqual(t, ping.Avg, 12.0, "error parsing ping field value for avg")
-	assertEqual(t, ping.Max, 25.0, "error parsing ping field value for max")
+	assertEqual(t, ping.Protocol, "ICMP", "error parsing ping field value for proto")
+	assertEqual(t, ping.Ttl, uint(54), "error parsing ping field value for ttl")
+	assertEqual(t, ping.PacketSize, uint(64), "error parsing ping field value for size")
+	assertEqual(t, ping.Duplicates, uint(0), "error parsing ping field value for dup")
+	assertEqual(t, ping.Received, uint(4), "error parsing ping field value for rcvd")
+	assertEqual(t, ping.Sent, uint(4), "error parsing ping field value for sent")
 
-	replies, err := ping.Replies()
-	if err != nil {
-		t.Error(err)
-	}
+	assertEqual(t, ping.Minimum, 4.75, "error parsing ping field value for min")
+	assertEqual(t, ping.Average, 12.0, "error parsing ping field value for avg")
+	assertEqual(t, ping.Maximum, 25.0, "error parsing ping field value for max")
+
 	rtts := make([]float64, 0)
-	for _, reply := range replies {
+	for _, reply := range ping.Replies {
 		rtts = append(rtts, reply.Rtt)
 	}
 	assertEqual(t, fmt.Sprint(rtts), "[10 15 4.75 5.25 25]", "error parsing RTTs")
-	med, _ := ping.MedianRTT()
+	med := ping.Median
 	medexp := 10.0
 	assertEqual(t, med, medexp, fmt.Sprintf("median is incorrect, got %f, expected %f", med, medexp))
 
@@ -106,18 +104,12 @@ func TestProbeParser(t *testing.T) {
 func TestMedian(t *testing.T) {
 	var list []float64
 
-	list = []float64{}
-	_, err := median(list)
-	if err == nil {
-		t.Errorf("median calculation of empty list should return error")
-	}
-
 	list = []float64{10, 40, 30, 20}
-	med2, _ := median(list)
+	med2 := median(list)
 	assertEqual(t, med2, 25.0, "error in median calculation for even list")
 
 	list = []float64{10, 40, 20}
-	med1, _ := median(list)
+	med1 := median(list)
 	assertEqual(t, med1, 20.0, "error in median calculation for odd list")
 }
 
