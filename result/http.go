@@ -94,7 +94,7 @@ func (http *HttpResult) Parse(from string) (err error) {
 }
 
 //////////////////////////////////////////////////////
-// internal representation of a ping result
+// API version of a ping result
 
 type httpResult struct {
 	BaseResult

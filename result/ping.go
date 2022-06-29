@@ -93,7 +93,7 @@ func (result *PingResult) ReplyRtts() []float64 {
 }
 
 //////////////////////////////////////////////////////
-// internal representation of a ping result
+// API version of a ping result
 
 // this is the JSON structure as reported by the API
 type pingResult struct {
