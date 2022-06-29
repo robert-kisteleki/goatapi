@@ -44,7 +44,7 @@ type Measurement struct {
 	Public           bool               `json:"is_public"`
 	ResolveOnProbe   bool               `json:"resolve_on_probe"`
 	ParticipantCount *uint              `json:"participant_count"`
-	ProbesRequested  *uint              `json:"probes_requested"`
+	ProbesRequested  *int               `json:"probes_requested"`
 	ProbesScheduled  *uint              `json:"probes_scheduled"`
 	CreditsPerResult uint               `json:"credits_per_result"`
 	ResultsPerDay    uint               `json:"estimated_results_per_day"`
