@@ -13,18 +13,19 @@ import (
 
 type NtpResult struct {
 	BaseResult
-	Protocol           string  `json:"proto"`           //
-	Version            uint    `json:"version"`         //
-	LeapIndicator      string  `json:"li"`              //
-	Mode               string  `json:"mode"`            //
-	Stratum            uint    `json:"stratum"`         //
-	PollInterval       uint    `json:"poll"`            //
-	Precision          float64 `json:"precision"`       //
-	RootDelay          float64 `json:"root-delay"`      //
-	RootDispersion     float64 `json:"root-dispersion"` //
-	ReferenceID        string  `json:"ref-id"`          //
-	ReferenceTimestamp float64 `json:"ref-ts"`          //
-	RawResult          []any   `json:"result"`          //
+	Protocol           string     //
+	Version            uint       //
+	LeapIndicator      string     // "no", "59", "61" or "unknown"
+	Mode               string     //
+	Stratum            uint       //
+	PollInterval       uint       //
+	Precision          float64    //
+	RootDelay          float64    //
+	RootDispersion     float64    //
+	ReferenceID        string     //
+	ReferenceTimestamp float64    //
+	Replies            []NtpReply //
+	Errors             []string   //
 }
 
 // one successful ntp reply
@@ -51,14 +52,14 @@ func (result *NtpReply) String() string {
 func (result *NtpResult) String() string {
 	ret := result.BaseString() +
 		fmt.Sprintf("\t%s\t%d\t%d\t%d",
-			result.ReferenceID, result.Stratum, len(result.Replies()), len(result.Errors()),
+			result.ReferenceID, result.Stratum, len(result.Replies), len(result.Errors),
 		)
 	return ret
 }
 
-func (result *NtpResult) LongString() string {
+func (result *NtpResult) DetailString() string {
 	return result.String() +
-		fmt.Sprintf("\t%s\t%v", result.Protocol, result.Replies())
+		fmt.Sprintf("\t%s\t%v", result.Protocol, result.Replies)
 }
 
 func (result *NtpResult) TypeName() string {
@@ -66,17 +67,53 @@ func (result *NtpResult) TypeName() string {
 }
 
 func (ntp *NtpResult) Parse(from string) (err error) {
-	err = json.Unmarshal([]byte(from), &ntp)
+	var intp ntpResult
+	err = json.Unmarshal([]byte(from), &intp)
 	if err != nil {
 		return err
 	}
-	if ntp.Type != "ntp" {
-		return fmt.Errorf("this is not an NTP result (type=%s)", ntp.Type)
+	if intp.Type != "ntp" {
+		return fmt.Errorf("this is not an NTP result (type=%s)", intp.Type)
 	}
+	ntp.BaseResult = intp.BaseResult
+	ntp.Protocol = intp.Protocol
+	ntp.Version = intp.Version
+	ntp.LeapIndicator = intp.LeapIndicator
+	ntp.Mode = intp.Mode
+	ntp.Stratum = intp.Stratum
+	ntp.PollInterval = intp.PollInterval
+	ntp.Precision = intp.Precision
+	ntp.RootDelay = intp.RootDelay
+	ntp.RootDispersion = intp.RootDispersion
+	ntp.ReferenceID = intp.ReferenceID
+	ntp.ReferenceTimestamp = intp.ReferenceTimestamp
+	ntp.Replies = intp.Replies()
+	ntp.Errors = intp.Errors()
+
 	return nil
 }
 
-func (result *NtpResult) Replies() []NtpReply {
+//////////////////////////////////////////////////////
+// API version of an NTP result
+
+// this is the JSON structure as reported by the API
+type ntpResult struct {
+	BaseResult
+	Protocol           string  `json:"proto"`           //
+	Version            uint    `json:"version"`         //
+	LeapIndicator      string  `json:"li"`              // "no", "59", "61" or "unknown"
+	Mode               string  `json:"mode"`            //
+	Stratum            uint    `json:"stratum"`         //
+	PollInterval       uint    `json:"poll"`            //
+	Precision          float64 `json:"precision"`       //
+	RootDelay          float64 `json:"root-delay"`      //
+	RootDispersion     float64 `json:"root-dispersion"` //
+	ReferenceID        string  `json:"ref-id"`          //
+	ReferenceTimestamp float64 `json:"ref-ts"`          //
+	RawResult          []any   `json:"result"`          //
+}
+
+func (result *ntpResult) Replies() []NtpReply {
 	r := make([]NtpReply, 0)
 	for _, item := range result.RawResult {
 		mapitem := item.(map[string]any)
@@ -105,7 +142,7 @@ func (result *NtpResult) Replies() []NtpReply {
 	return r
 }
 
-func (result *NtpResult) Errors() []string {
+func (result *ntpResult) Errors() []string {
 	r := make([]string, 0)
 	for _, item := range result.RawResult {
 		mapitem := item.(map[string]any)
