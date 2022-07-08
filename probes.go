@@ -473,8 +473,14 @@ func GetProbe(
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
-		return nil, nil
+	if resp.StatusCode != 200 {
+		// something went wrong; see if the error page can be parsed
+		var error ErrorResponse
+		err = json.NewDecoder(resp.Body).Decode(&error)
+		if err != nil {
+			return probe, err
+		}
+		return probe, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
 	}
 
 	// grab and store the actual content
