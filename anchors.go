@@ -184,7 +184,7 @@ func (filter *AnchorFilter) GetAnchorCount(
 	req.Header.Set("User-Agent", uaString)
 
 	if verbose {
-		fmt.Printf("API call: GET %s\n", req.URL)
+		fmt.Printf("# API call: GET %s\n", req.URL)
 	}
 
 	client := &http.Client{}
@@ -244,7 +244,7 @@ func (filter *AnchorFilter) GetAnchors(
 	// results are paginated with next=
 	for {
 		if verbose {
-			fmt.Printf("API call: GET %s\n", req.URL)
+			fmt.Printf("# API call: GET %s\n", req.URL)
 		}
 
 		client := &http.Client{}

@@ -474,7 +474,7 @@ func (filter *MeasurementFilter) GetMeasurementCount(
 
 	// results are paginated with next= (and previous=)
 	if verbose {
-		msg := fmt.Sprintf("API call: GET %s", req.URL)
+		msg := fmt.Sprintf("# API call: GET %s", req.URL)
 		if filter.key != nil {
 			msg += fmt.Sprintf(" (using API key %s...)", filter.key.String()[:8])
 		}
@@ -542,7 +542,7 @@ func (filter *MeasurementFilter) GetMeasurements(
 	// results are paginated with next= (and previoous=)
 	for {
 		if verbose {
-			msg := fmt.Sprintf("API call: GET %s", req.URL)
+			msg := fmt.Sprintf("# API call: GET %s", req.URL)
 			if filter.key != nil {
 				msg += fmt.Sprintf(" (using API key %s...)", filter.key.String()[:8])
 			}
@@ -619,7 +619,7 @@ func GetMeasurement(
 	req.Header.Set("User-Agent", uaString)
 
 	if verbose {
-		fmt.Printf("API call: GET %s\n", req.URL)
+		fmt.Printf("# API call: GET %s\n", req.URL)
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)

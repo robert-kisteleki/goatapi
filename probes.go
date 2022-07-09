@@ -344,7 +344,7 @@ func (filter *ProbeFilter) GetProbeCount(
 
 	// results are paginated with next= (and previous=)
 	if verbose {
-		fmt.Printf("API call: GET %s\n", req.URL)
+		fmt.Printf("# API call: GET %s\n", req.URL)
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -401,7 +401,7 @@ func (filter *ProbeFilter) GetProbes(
 	// results are paginated with next= (and previoous=)
 	for {
 		if verbose {
-			fmt.Printf("API call: GET %s\n", req.URL)
+			fmt.Printf("# API call: GET %s\n", req.URL)
 		}
 		client := &http.Client{}
 		resp, err := client.Do(req)
@@ -464,7 +464,7 @@ func GetProbe(
 	req.Header.Set("User-Agent", uaString)
 
 	if verbose {
-		fmt.Printf("API call: GET %s\n", req.URL)
+		fmt.Printf("# API call: GET %s\n", req.URL)
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
