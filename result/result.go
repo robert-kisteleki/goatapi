@@ -18,6 +18,8 @@ type Result interface {
 	TypeName() string
 	String() string
 	DetailString() string
+	GetTimeStamp() time.Time
+	GetProbeID() uint
 }
 
 type AsyncResult struct {

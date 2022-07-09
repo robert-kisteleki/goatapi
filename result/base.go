@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/netip"
+	"time"
 )
 
 type BaseResult struct {
@@ -66,4 +67,12 @@ func (result *BaseResult) BaseDetailString() string {
 
 func (result *BaseResult) TypeName() string {
 	return result.Type
+}
+
+func (result *BaseResult) GetTimeStamp() time.Time {
+	return time.Time(result.TimeStamp)
+}
+
+func (result *BaseResult) GetProbeID() uint {
+	return result.ProbeID
 }
