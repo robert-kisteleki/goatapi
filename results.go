@@ -27,6 +27,7 @@ type ResultsFilter struct {
 	start  *time.Time
 	stop   *time.Time
 	probes []uint
+	latest bool
 }
 
 // NewResultsFilter prepares a new result filter object
@@ -74,6 +75,11 @@ func (filter *ResultsFilter) FilterAnchors() {
 // FilterAnchors filters for results reported by public probes
 func (filter *ResultsFilter) FilterPublicProbes() {
 	filter.params.Add("public-only", "true")
+}
+
+// FilterLatest "filters" fro downloading the latest results only
+func (filter *ResultsFilter) FilterLatest() {
+	filter.latest = true
 }
 
 // Limit limits the number of result retrieved
@@ -245,7 +251,13 @@ func (filter *ResultsFilter) openNetworkResults(
 		return nil, err
 	}
 
-	query := fmt.Sprintf("%smeasurements/%d/results/?%s", apiBaseURL, filter.id, filter.params.Encode())
+	query := fmt.Sprintf("%smeasurements/%d/", apiBaseURL, filter.id)
+	if filter.latest {
+		query += "latest/"
+	} else {
+		query += "results/"
+	}
+	query += fmt.Sprintf("?%s", filter.params.Encode())
 
 	req, err := http.NewRequest("GET", query, nil)
 	if err != nil {
