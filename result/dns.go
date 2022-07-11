@@ -25,30 +25,49 @@ type DnsResult struct {
 	Responses  []DnsResponse //
 }
 
-// DnsResponse holds one response from one server/resolver, with all assodicated data
+// DnsResponse holds one response from one server/resolver, with all associated data
 // Various bits like counts and answers are stored here in a simple format which
 // is likely a good fit for many use cases; one could look at all the gory details in
 // the AnswerBuf (abuf) if more details are needed
 type DnsResponse struct {
-	TimeStamp       time.Time      //
-	SourceAddr      netip.Addr     //
-	Destination     netip.AddrPort //
-	Error           []DnsError     // ?
-	AddressFamily   uint           //
-	Protocol        string         //
-	RetryCount      uint           //
-	QueryBuf        []byte         //
-	ResponseTime    float64        //
-	ResponseSize    uint           //
-	QueryID         uint           //
-	AnswerBuf       []byte         //
-	QueriesCount    uint           //
-	AnswerCount     uint           //
-	NameServerCount uint           //
-	AdditionalCount uint           //
-	Question        DnsQuestion    //
-	Answers         []DnsAnswer    //
-	Ttl6            uint           //
+	TimeStamp     time.Time      //
+	SourceAddr    netip.Addr     //
+	Destination   netip.AddrPort //
+	Error         []DnsError     // ?
+	AddressFamily uint           //
+	Protocol      string         //
+	RetryCount    uint           //
+	QueryBuf      []byte         //
+	ResponseTime  float64        //
+	ResponseSize  uint           //
+
+	// overview
+	QueryID         uint //
+	QueriesCount    uint //
+	AnswerCount     uint //
+	NameServerCount uint //
+	AdditionalCount uint //
+
+	// various bits
+	Response           bool //
+	Opcode             int  //
+	Authoritative      bool //
+	Truncated          bool //
+	RecursionDesired   bool //
+	RecursionAvailable bool //
+	Zero               bool //
+	AuthenticatedData  bool //
+	CheckingDisabled   bool //
+	Rcode              int  //
+
+	// details
+	AnswerBuf []byte      //
+	Question  DnsQuestion //
+	Answer    []DnsAnswer //
+	Ns        []DnsAnswer //
+	Extra     []DnsAnswer //
+
+	Ttl6 uint //
 }
 
 // DnsQuestion is the question that was asked - as parsed from abuf
@@ -104,6 +123,17 @@ const (
 	DnsClassINET  = 1
 	DnsClassCHAOS = 3
 	DnsClassANY   = 255
+
+	// this is not a full list!
+	DnsRcodeNOERR     = 0
+	DnsRcodeFORMERR   = 1
+	DnsRcodeSERVFAIL  = 2
+	DnsRcodeNXDOMAIN  = 3
+	DnsRcodeNOTIMP    = 4
+	DnsRcodeREFUSED   = 5
+	DnsRcodeNOTAUTH   = 9
+	DnsRcodeBADVERS   = 16
+	DnsRcodeBADCOOKIE = 23
 )
 
 // DnsTypeNames translates record types to their names
@@ -138,6 +168,18 @@ var DnsClassNames = map[int]string{
 	DnsClassINET:  "IN",
 	DnsClassCHAOS: "CH",
 	DnsClassANY:   "ANY",
+}
+
+var DnsRcodeNames = map[int]string{
+	DnsRcodeNOERR:     "NOERR",
+	DnsRcodeFORMERR:   "FORMERR",
+	DnsRcodeSERVFAIL:  "SERVFAIL",
+	DnsRcodeNXDOMAIN:  "NXSOMAIN",
+	DnsRcodeNOTIMP:    "NOTIMP",
+	DnsRcodeREFUSED:   "REFUSED",
+	DnsRcodeNOTAUTH:   "NOAUTH",
+	DnsRcodeBADVERS:   "BADVERS",
+	DnsRcodeBADCOOKIE: "BADCOOKIE",
 }
 
 // String converts a DnsResult object to a textual form
@@ -177,7 +219,7 @@ func (resp *DnsResponse) String() string {
 // DetailString converts a DnsResponse object to a long textual form
 func (resp *DnsResponse) DetailString() string {
 	s := make([]string, 0)
-	for _, detail := range resp.Answers {
+	for _, detail := range resp.AllAnswers() {
 		s = append(s, detail.DetailString())
 	}
 	return resp.String() + "\t[" + strings.Join(s, " ") + "]"
@@ -279,13 +321,31 @@ func (result *DnsResult) Filter(class int, typ int) []DnsAnswer {
 
 // Filter filters out the desired class/type answers from all answers
 // in a specific response
-func (exc *DnsResponse) Filter(class int, typ int) []DnsAnswer {
+func (resp *DnsResponse) Filter(class int, typ int) []DnsAnswer {
 	answers := make([]DnsAnswer, 0)
-	for _, answer := range exc.Answers {
+	for _, answer := range resp.AllAnswers() {
 		if answer.Class == class && answer.Type == typ {
 			answers = append(answers, answer)
 		}
 	}
+	return answers
+}
+
+// AllAnswers aggregates all answers from all responses into an array
+func (result *DnsResult) AllAnswers() []DnsAnswer {
+	answers := make([]DnsAnswer, 0)
+	for _, resp := range result.Responses {
+		answers = append(answers, resp.AllAnswers()...)
+	}
+	return answers
+}
+
+// AllAnswers aggregates all answers from a responses into an array
+func (resp *DnsResponse) AllAnswers() []DnsAnswer {
+	answers := make([]DnsAnswer, 0)
+	answers = append(answers, resp.Answer...)
+	answers = append(answers, resp.Ns...)
+	answers = append(answers, resp.Extra...)
 	return answers
 }
 
@@ -305,7 +365,7 @@ type dnsResult struct {
 
 type dnsResponse struct {
 	Time            uniTime    `json:"time"`     //
-	LastTimeSync    uint       `json:"lts"`      //
+	LastTimeSync    int        `json:"lts"`      //
 	SourceAddr      netip.Addr `json:"src_addr"` //
 	DestinationAddr netip.Addr `json:"dst_addr"` //
 	DestinationPort string     `json:"dst_port"` //
@@ -431,10 +491,20 @@ func makeDnsResponse(
 		}
 		return list
 	}
-	de.Answers = make([]DnsAnswer, 0)
-	de.Answers = append(de.Answers, makeAnswers(parsed.Answer)...)
-	de.Answers = append(de.Answers, makeAnswers(parsed.Ns)...)
-	de.Answers = append(de.Answers, makeAnswers(parsed.Extra)...)
+	de.Answer = makeAnswers(parsed.Answer)
+	de.Ns = makeAnswers(parsed.Ns)
+	de.Extra = makeAnswers(parsed.Extra)
+
+	de.Response = parsed.Response
+	de.Opcode = parsed.Opcode
+	de.Authoritative = parsed.Authoritative
+	de.Truncated = parsed.Truncated
+	de.RecursionDesired = parsed.RecursionDesired
+	de.RecursionAvailable = parsed.RecursionAvailable
+	de.Zero = parsed.Zero
+	de.AuthenticatedData = parsed.AuthenticatedData
+	de.CheckingDisabled = parsed.CheckingDisabled
+	de.Rcode = parsed.Rcode
 
 	// include the question, because why not
 	if len(parsed.Question) > 0 {
