@@ -56,6 +56,12 @@ func ParseWithTypeHint(from string, typehint string) (Result, error) {
 	case "http":
 		httpres := HttpResult{}
 		res = &httpres
+	case "uptime":
+		uptimeres := UptimeResult{}
+		res = &uptimeres
+	case "connection":
+		connres := ConnectionResult{}
+		res = &connres
 	default:
 		return nil, fmt.Errorf("unknown/unsupported result type %s", typehint)
 	}
