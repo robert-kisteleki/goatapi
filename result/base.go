@@ -19,9 +19,9 @@ type BaseResult struct {
 	MeasurementID   uint        `json:"msm_id"`           //
 	GroupID         uint        `json:"group_id"`         //
 	ProbeID         uint        `json:"prb_id"`           //
-	MeasurementName string      `json:"msm_name"`         //
-	Type            string      `json:"type"`             //
-	TimeStamp       uniTime     `json:"timestamp"`        //
+	MeasurementName string      `json:"msm_name"`         // measurement name (better use type)
+	Type            string      `json:"type"`             // measurement type
+	TimeStamp       uniTime     `json:"timestamp"`        // when was this result collected
 	StoreTimeStamp  uniTime     `json:"stored_timestamp"` // when was this result stored
 	Bundle          uint        `json:"bundle"`           // ID for a collection of related measurement results
 	LastTimeSync    int         `json:"lts"`              // how long ago was the probe's clock synced
@@ -29,8 +29,8 @@ type BaseResult struct {
 	DestinationAddr *netip.Addr `json:"dst_addr"`         //
 	SourceAddr      netip.Addr  `json:"src_addr"`         // source address used by probe
 	FromAddr        netip.Addr  `json:"from"`             // IP address of the probe as known by the infra
-	AddressFamily   uint        `json:"af"`               //
-	ResolveTime     *float64    `json:"ttr"`              //
+	AddressFamily   uint        `json:"af"`               // 4 or 6
+	ResolveTime     *float64    `json:"ttr"`              // only if resolve-on-probe was used
 }
 
 func (result *BaseResult) Parse(from string) (err error) {
@@ -42,11 +42,15 @@ func (result *BaseResult) Parse(from string) (err error) {
 }
 
 func (result *BaseResult) String() string {
-	ret := fmt.Sprintf("%d\t%d\t%v\t\"%s\"",
+	d := "N/A"
+	if result.DestinationName != "" {
+		d = result.DestinationName
+	}
+	ret := fmt.Sprintf("%d\t%d\t%v\t%s",
 		result.MeasurementID,
 		result.ProbeID,
 		result.TimeStamp,
-		result.DestinationName,
+		d,
 	)
 	ret += valueOrNA("", false, result.DestinationAddr)
 	return ret
