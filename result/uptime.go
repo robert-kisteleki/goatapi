@@ -16,18 +16,6 @@ type UptimeResult struct {
 	Uptime uint //
 }
 
-func (result *UptimeResult) String() string {
-	ret := result.BaseString() +
-		fmt.Sprintf("\t%d",
-			result.Uptime,
-		)
-	return ret
-}
-
-func (result *UptimeResult) DetailString() string {
-	return result.String()
-}
-
 func (result *UptimeResult) TypeName() string {
 	return "uptime"
 }

@@ -41,7 +41,7 @@ func (result *BaseResult) Parse(from string) (err error) {
 	return nil
 }
 
-func (result *BaseResult) String() string {
+func (result *BaseResult) BaseString() string {
 	d := "N/A"
 	if result.DestinationName != "" {
 		d = result.DestinationName
@@ -56,21 +56,23 @@ func (result *BaseResult) String() string {
 	return ret
 }
 
-func (result *BaseResult) DetailString() string {
-	return result.BaseDetailString() +
-		fmt.Sprintf("\t%d", result.AddressFamily)
-}
-
-func (result *BaseResult) BaseString() string {
-	return result.String()
-}
-
 func (result *BaseResult) BaseDetailString() string {
-	return result.BaseString()
+	return result.BaseString() +
+		fmt.Sprintf("\t%d", result.AddressFamily)
 }
 
 func (result *BaseResult) TypeName() string {
 	return result.Type
+}
+
+// Destination yields the destination name
+// Or if that's not defined then the destination address
+func (result *BaseResult) Destination() string {
+	if result.DestinationName != "" {
+		return result.DestinationName
+	} else {
+		return result.DestinationAddr.String()
+	}
 }
 
 func (result *BaseResult) GetTimeStamp() time.Time {

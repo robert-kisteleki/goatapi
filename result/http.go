@@ -33,24 +33,6 @@ type HttpResult struct {
 	//Time *uniTime `json:"time"` //
 }
 
-func (result *HttpResult) String() string {
-	ret := result.BaseString() +
-		fmt.Sprintf("\t%s", result.Uri)
-	return ret
-}
-
-func (result *HttpResult) DetailString() string {
-	res := result.String() +
-		fmt.Sprintf("\t\"%s\"\t%s\t%d\t%d\t%d",
-			result.Error,
-			result.Method,
-			result.ResultCode,
-			result.HeaderSize,
-			result.BodySize,
-		)
-	return res
-}
-
 func (result *HttpResult) TypeName() string {
 	return "http"
 }

@@ -12,7 +12,6 @@ import (
 	"encoding/pem"
 	"fmt"
 	"log"
-	"strings"
 )
 
 type CertResult struct {
@@ -38,42 +37,6 @@ const (
 	AlertLevelWarning = iota
 	AlertLevelFatal
 )
-
-func (result *CertResult) String() string {
-	ret := result.BaseString()
-	if result.Error != nil {
-		return ret + fmt.Sprintf("\tERROR: %s", *result.Error)
-	}
-	// TODO: test this
-	if result.Alert != nil {
-		ret += fmt.Sprintf("\tALERT: %d %d", result.Alert.Level, result.Alert.Description)
-	}
-	if result.Alert == nil || result.Alert.Level == AlertLevelWarning {
-		ret += fmt.Sprintf("\t%s\t%s\t%f\t%d",
-			result.Method,
-			result.ProtocolVersion,
-			result.ReplyTime,
-			len(result.Certificates),
-		)
-	}
-	return ret
-}
-
-func (result *CertResult) DetailString() string {
-	ret := result.String()
-	if result.Alert == nil && result.Error == nil {
-		ret += fmt.Sprintf("\t%s", result.ServerCipher)
-	}
-	certs := make([]string, 0)
-	for _, cert := range result.Certificates {
-		certs = append(certs, fmt.Sprintf("<%x %s>	",
-			cert.SerialNumber,
-			cert.Subject,
-		))
-	}
-	ret += "\t[" + strings.Join(certs, "\t") + "]"
-	return ret
-}
 
 func (result *CertResult) TypeName() string {
 	return "sslcert"

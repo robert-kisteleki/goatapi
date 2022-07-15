@@ -16,8 +16,6 @@ import (
 type Result interface {
 	Parse(from string) (err error)
 	TypeName() string
-	String() string
-	DetailString() string
 	GetTimeStamp() time.Time
 	GetProbeID() uint
 }

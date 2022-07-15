@@ -38,30 +38,6 @@ type NtpReply struct {
 	Rtt               float64 //
 }
 
-func (result *NtpReply) String() string {
-	return fmt.Sprintf("[%f\t%f\t%f\t%f\t%f\t%f]",
-		result.Offset,
-		result.Rtt,
-		result.OriginTimestamp,
-		result.TransmitTimestamp,
-		result.ReceiveTimestamp,
-		result.FinalTimestamp,
-	)
-}
-
-func (result *NtpResult) String() string {
-	ret := result.BaseString() +
-		fmt.Sprintf("\t%s\t%d\t%d\t%d",
-			result.ReferenceID, result.Stratum, len(result.Replies), len(result.Errors),
-		)
-	return ret
-}
-
-func (result *NtpResult) DetailString() string {
-	return result.String() +
-		fmt.Sprintf("\t%s\t%v", result.Protocol, result.Replies)
-}
-
 func (result *NtpResult) TypeName() string {
 	return "ntp"
 }

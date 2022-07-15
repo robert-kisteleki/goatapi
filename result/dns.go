@@ -182,62 +182,9 @@ var DnsRcodeNames = map[int]string{
 	DnsRcodeBADCOOKIE: "BADCOOKIE",
 }
 
-// String converts a DnsResult object to a textual form
-func (result *DnsResult) String() string {
-	return result.BaseString() +
-		fmt.Sprintf("\t%d\t%d",
-			len(result.Responses),
-			len(result.Error),
-		)
-}
-
-// LongString converts a DnsResult object to a long textual form
-func (result *DnsResult) DetailString() string {
-	s := make([]string, 0)
-	for _, detail := range result.Responses {
-		s = append(s, detail.DetailString())
-	}
-	return result.String() + "\t[" + strings.Join(s, " ") + "]"
-}
-
 // TypeName returns the codename for this result type
 func (result *DnsResult) TypeName() string {
 	return "dns"
-}
-
-// String converts a DnsResponse object to a textual form
-func (resp *DnsResponse) String() string {
-	ret := fmt.Sprintf("%d\t%d\t%d\t%d",
-		resp.AnswerCount,
-		resp.QueriesCount,
-		resp.NameServerCount,
-		resp.AdditionalCount,
-	)
-	return ret
-}
-
-// DetailString converts a DnsResponse object to a long textual form
-func (resp *DnsResponse) DetailString() string {
-	s := make([]string, 0)
-	for _, detail := range resp.AllAnswers() {
-		s = append(s, detail.DetailString())
-	}
-	return resp.String() + "\t[" + strings.Join(s, " ") + "]"
-}
-
-// DetailString converts a DnsAnswer object to a long textual form
-func (detail *DnsAnswer) DetailString() string {
-	cl := DnsClassNames[detail.Class]
-	if cl == "" {
-		// yet unmapped class entries are represented as (Cxx)
-		cl = fmt.Sprintf("(C%d)", detail.Class)
-	}
-	ty := DnsTypeNames[detail.Type]
-	if ty == "" {
-		// yet unmapped type entries are represented as (Txx)
-		cl = fmt.Sprintf("(T%d)", detail.Type)
-	}
-	return fmt.Sprintf("%s %s %s '%s'", cl, ty, detail.Name, detail.Data)
 }
 
 // Parse takes a DNS result JSON blob and turns it into a DnsResult object

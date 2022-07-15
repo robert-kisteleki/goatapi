@@ -20,23 +20,6 @@ type ConnectionResult struct {
 	Prefix     netip.Prefix
 }
 
-func (result *ConnectionResult) String() string {
-	var e string
-	switch result.Event {
-	case "connect":
-		e = "C"
-	case "disconnect":
-		e = "D"
-	default:
-		e = "?"
-	}
-	return result.BaseString() + fmt.Sprintf("\t%s\t%s", e, result.Controller)
-}
-
-func (result *ConnectionResult) DetailString() string {
-	return result.String() + fmt.Sprintf("\t%d\t%v", result.Asn, result.Prefix)
-}
-
 func (result *ConnectionResult) TypeName() string {
 	return "connection"
 }
