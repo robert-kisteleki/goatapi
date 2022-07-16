@@ -42,6 +42,9 @@ func ParseWithTypeHint(from string, typehint string) (Result, error) {
 	case "ping":
 		pingres := PingResult{}
 		res = &pingres
+	case "traceroute":
+		traceres := TracerouteResult{}
+		res = &traceres
 	case "dns":
 		dnsres := DnsResult{}
 		res = &dnsres
