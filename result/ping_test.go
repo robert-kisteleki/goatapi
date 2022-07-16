@@ -8,7 +8,6 @@ package result
 
 import (
 	"fmt"
-	"net/netip"
 	"reflect"
 	"testing"
 )
@@ -57,24 +56,6 @@ func TestProbeParser(t *testing.T) {
 		t.Fatalf("Error parsing ping result: %s", err)
 	}
 
-	assertEqual(t, ping.FirmwareVersion, uint(5040), "error parsing ping field value for fw")
-	assertEqual(t, ping.LastTimeSync, 20, "error parsing ping field value for lts")
-	assertEqual(t, ping.DestinationName, "example.com", "error parsing ping field value for dst_name")
-	dst, _ := netip.ParseAddr("10.1.2.3")
-	assertEqual(t, *ping.DestinationAddr, dst, "error parsing ping field value for dst_addr")
-	src, _ := netip.ParseAddr("10.2.3.4")
-	assertEqual(t, ping.SourceAddr, src, "error parsing ping field value for src_addr")
-	from, _ := netip.ParseAddr("192.168.1.1")
-	assertEqual(t, ping.FromAddr, from, "error parsing ping field value for from")
-	assertEqual(t, *ping.ResolveTime, 1.234, "error parsing ping field value for ttr")
-	assertEqual(t, ping.AddressFamily, uint(4), "error parsing ping field value for af")
-	assertEqual(t, ping.MeasurementID, uint(1234567), "error parsing ping field value for msm_id")
-	assertEqual(t, ping.ProbeID, uint(2345678), "error parsing ping field value for prb_id")
-	assertEqual(t, ping.GroupID, uint(34567890), "error parsing ping field value for group_id")
-	assertEqual(t, ping.TimeStamp.String(), "2022-06-17T05:22:00Z", "error parsing ping field value for timestamp")
-	assertEqual(t, ping.StoreTimeStamp.String(), "2022-06-17T05:22:02Z", "error parsing ping field value for stored_timestamp")
-	assertEqual(t, ping.MeasurementName, "Ping", "error parsing ping field value for msm_name")
-	assertEqual(t, ping.Type, "ping", "error parsing ping field value for type")
 	assertEqual(t, *ping.Step, uint(10), "error parsing ping field value for step")
 
 	assertEqual(t, ping.Protocol, "ICMP", "error parsing ping field value for proto")
