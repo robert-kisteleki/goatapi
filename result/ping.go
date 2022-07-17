@@ -56,7 +56,9 @@ func (ping *PingResult) Parse(from string) (err error) {
 	ping.PacketSize = iping.PacketSize
 	ping.Protocol = iping.Protocol
 	ping.Step = iping.Step
-	ping.Ttl = *iping.Ttl
+	if iping.Ttl != nil {
+		ping.Ttl = *iping.Ttl
+	}
 	if len(ping.Replies) == 0 {
 		ping.Median = -1
 	} else {
@@ -114,7 +116,7 @@ func (result *pingResult) Replies() []PingReply {
 				pr.Source = *result.DestinationAddr // TODO: is this correct?
 			}
 			if ttl, ok := mapitem["ttl"]; ok {
-				pr.Ttl = ttl.(uint)
+				pr.Ttl = uint(ttl.(float64))
 			} else {
 				pr.Ttl = *result.Ttl
 			}
