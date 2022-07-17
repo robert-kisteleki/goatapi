@@ -20,23 +20,23 @@ import (
 
 // Probe object, as it comes from the API
 type Probe struct {
-	ID             int           `json:"id"`
+	ID             uint          `json:"id"`
 	Address4       *netip.Addr   `json:"address_v4"`
 	Address6       *netip.Addr   `json:"address_v6"`
-	ASN4           *int          `json:"asn_v4"`
-	ASN6           *int          `json:"asn_v6"`
+	ASN4           *uint         `json:"asn_v4"`
+	ASN6           *uint         `json:"asn_v6"`
 	CountryCode    string        `json:"country_code"`
 	Description    string        `json:"description"`
-	FirstConnected *isoTime      `json:"first_connected"`
-	LastConnected  *isoTime      `json:"last_connected"`
+	FirstConnected *uniTime      `json:"first_connected"`
+	LastConnected  *uniTime      `json:"last_connected"`
 	Location       Geolocation   `json:"geometry"`
 	Anchor         bool          `json:"is_anchor"`
 	Prefix4        *netip.Prefix `json:"prefix_v4"`
 	Prefix6        *netip.Prefix `json:"prefix_v6"`
 	Public         bool          `json:"is_public"`
 	Status         ProbeStatus   `json:"status"`
-	StatusSince    isoTime       `json:"status_since"`
-	TotalUptime    int           `json:"total_uptime"`
+	StatusSince    uniTime       `json:"status_since"`
+	TotalUptime    uint          `json:"total_uptime"`
 	Type           string        `json:"type"`
 	Tags           []Tag         `json:"tags"`
 }
@@ -55,7 +55,7 @@ const (
 )
 
 // ProbeStatusDict maps the probe status codes to human readable descriptions
-var ProbeStatusDict = map[int]string{
+var ProbeStatusDict = map[uint]string{
 	ProbeStatusNeverConnected: "NeverConnected",
 	ProbeStatusConnected:      "Connected",
 	ProbeStatusDisconnected:   "Disconnected",
@@ -64,9 +64,9 @@ var ProbeStatusDict = map[int]string{
 
 // ProbeStatus as defined by the API
 type ProbeStatus struct {
-	ID    int      `json:"id"`
+	ID    uint     `json:"id"`
 	Name  string   `json:"name"`
-	Since *isoTime `json:"since"`
+	Since *uniTime `json:"since"`
 }
 
 // ShortString produces a short textual description of the probe
@@ -79,8 +79,8 @@ func (probe *Probe) ShortString() string {
 		text += "\tN/A"
 	}
 
-	text += appendValueOrNA("AS", false, probe.ASN4)
-	text += appendValueOrNA("AS", false, probe.ASN6)
+	text += valueOrNA("AS", false, probe.ASN4)
+	text += valueOrNA("AS", false, probe.ASN6)
 
 	text += fmt.Sprintf("\t%v", probe.Location.Coordinates)
 
@@ -97,12 +97,12 @@ func (probe *Probe) ShortString() string {
 func (probe *Probe) LongString() string {
 	text := probe.ShortString()
 
-	text += appendValueOrNA("", false, probe.Address4)
-	text += appendValueOrNA("", false, probe.Prefix4)
-	text += appendValueOrNA("", false, probe.Address6)
-	text += appendValueOrNA("", false, probe.Prefix6)
-	text += appendValueOrNA("", false, probe.FirstConnected)
-	text += appendValueOrNA("", false, probe.LastConnected)
+	text += valueOrNA("", false, probe.Address4)
+	text += valueOrNA("", false, probe.Prefix4)
+	text += valueOrNA("", false, probe.Address6)
+	text += valueOrNA("", false, probe.Prefix6)
+	text += valueOrNA("", false, probe.FirstConnected)
+	text += valueOrNA("", false, probe.LastConnected)
 	text += fmt.Sprintf(" %d %v %v", probe.TotalUptime, probe.Anchor, probe.Public)
 
 	tags := make([]string, 0)
@@ -116,7 +116,7 @@ func (probe *Probe) LongString() string {
 
 // the API paginates; this describes one such page
 type probeListingPage struct {
-	Count    int     `json:"count"`
+	Count    uint    `json:"count"`
 	Next     string  `json:"next"`
 	Previous string  `json:"previous"`
 	Probes   []Probe `json:"results"`
@@ -125,20 +125,20 @@ type probeListingPage struct {
 // ProbeFilter struct holds specified filters and other options
 type ProbeFilter struct {
 	params url.Values
-	id     int
-	limit  int
+	id     uint
+	limit  uint
 }
 
 // NewProbeFilter prepares a new probe filter object
-func NewProbeFilter() ProbeFilter {
+func NewProbeFilter() *ProbeFilter {
 	filter := ProbeFilter{}
 	filter.params = url.Values{}
 	filter.params.Add("format[datetime]", "iso-8601")
-	return filter
+	return &filter
 }
 
 // FilterID filters by a particular probe ID
-func (filter *ProbeFilter) FilterID(id int) {
+func (filter *ProbeFilter) FilterID(id uint) {
 	filter.id = id
 }
 
@@ -148,58 +148,58 @@ func (filter *ProbeFilter) FilterCountry(cc string) {
 }
 
 // FilterIDGt filters for probe IDs > some number
-func (filter *ProbeFilter) FilterIDGt(n int) {
+func (filter *ProbeFilter) FilterIDGt(n uint) {
 	filter.params.Add("id__gt", fmt.Sprint(n))
 }
 
 // FilterIDGte filters for probe IDs >= some number
-func (filter *ProbeFilter) FilterIDGte(n int) {
+func (filter *ProbeFilter) FilterIDGte(n uint) {
 	filter.params.Add("id__gte", fmt.Sprint(n))
 }
 
 // FilterIDLt filters for probe IDs < some number
-func (filter *ProbeFilter) FilterIDLt(n int) {
+func (filter *ProbeFilter) FilterIDLt(n uint) {
 	filter.params.Add("id__lt", fmt.Sprint(n))
 }
 
 // FilterIDLte filters for probe IDs <= some number
-func (filter *ProbeFilter) FilterIDLte(n int) {
+func (filter *ProbeFilter) FilterIDLte(n uint) {
 	filter.params.Add("id__lte", fmt.Sprint(n))
 }
 
 // FilterIDin filters for probe ID being one of several in the list specified
-func (filter *ProbeFilter) FilterIDin(list []int) {
+func (filter *ProbeFilter) FilterIDin(list []uint) {
 	filter.params.Add("id__in", makeCsv(list))
 }
 
 // FilterASN filters for an ASN in IPv4 or IPv6 space
-func (filter *ProbeFilter) FilterASN(n int) {
+func (filter *ProbeFilter) FilterASN(n uint) {
 	filter.params.Add("asn", fmt.Sprint(n))
 }
 
 // FilterASN4 filters for an ASN in IPv4 space
-func (filter *ProbeFilter) FilterASN4(n int) {
+func (filter *ProbeFilter) FilterASN4(n uint) {
 	filter.params.Add("asn_v4", fmt.Sprint(n))
 }
 
 // FilterASN4in filters for an ASN on this list in IPv4 space
-func (filter *ProbeFilter) FilterASN4in(list []int) {
+func (filter *ProbeFilter) FilterASN4in(list []uint) {
 	filter.params.Add("asn_v4__in", makeCsv(list))
 }
 
 // FilterASN6 filters for an ASN in IPv6 space
-func (filter *ProbeFilter) FilterASN6(n int) {
+func (filter *ProbeFilter) FilterASN6(n uint) {
 	filter.params.Add("asn_v6", fmt.Sprint(n))
 }
 
 // FilterASN6in filters for an ASN on this list in IPv6 space
-func (filter *ProbeFilter) FilterASN6in(list []int) {
+func (filter *ProbeFilter) FilterASN6in(list []uint) {
 	filter.params.Add("asn_v6__in", makeCsv(list))
 }
 
 // FilterStatus filters for probes that have a specific status
 // See: const MeasurementStatusSpecified*
-func (filter *ProbeFilter) FilterStatus(n int) {
+func (filter *ProbeFilter) FilterStatus(n uint) {
 	filter.params.Add("status", fmt.Sprint(n))
 }
 
@@ -282,7 +282,7 @@ func (filter *ProbeFilter) Sort(by string) {
 }
 
 // Limit limits the number of result retrieved
-func (filter *ProbeFilter) Limit(limit int) {
+func (filter *ProbeFilter) Limit(limit uint) {
 	filter.limit = limit
 }
 
@@ -316,13 +316,6 @@ func (filter *ProbeFilter) verifyFilters() error {
 		}
 	}
 
-	if filter.limit < 0 {
-		return fmt.Errorf("limit must not be negative")
-	}
-	if filter.id < 0 {
-		return fmt.Errorf("ID must not be negative")
-	}
-
 	return nil
 }
 
@@ -330,7 +323,7 @@ func (filter *ProbeFilter) verifyFilters() error {
 func (filter *ProbeFilter) GetProbeCount(
 	verbose bool,
 ) (
-	count int,
+	count uint,
 	err error,
 ) {
 	// sanity checks - late in the process, but not too late
@@ -351,7 +344,7 @@ func (filter *ProbeFilter) GetProbeCount(
 
 	// results are paginated with next= (and previous=)
 	if verbose {
-		fmt.Printf("API call: GET %s\n", req.URL)
+		fmt.Printf("# API call: GET %s\n", req.URL)
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -408,7 +401,7 @@ func (filter *ProbeFilter) GetProbes(
 	// results are paginated with next= (and previoous=)
 	for {
 		if verbose {
-			fmt.Printf("API call: GET %s\n", req.URL)
+			fmt.Printf("# API call: GET %s\n", req.URL)
 		}
 		client := &http.Client{}
 		resp, err := client.Do(req)
@@ -425,14 +418,14 @@ func (filter *ProbeFilter) GetProbes(
 		}
 
 		// add elements to the list while observing the limit
-		if filter.limit != 0 && len(probes)+len(page.Probes) > filter.limit {
-			probes = append(probes, page.Probes[:filter.limit-len(probes)]...)
+		if filter.limit != 0 && uint(len(probes)+len(page.Probes)) > filter.limit {
+			probes = append(probes, page.Probes[:filter.limit-uint(len(probes))]...)
 		} else {
 			probes = append(probes, page.Probes...)
 		}
 
 		// no next page or got to exactly the limit => we're done
-		if page.Next == "" || len(probes) == filter.limit {
+		if page.Next == "" || uint(len(probes)) == filter.limit {
 			break
 		}
 
@@ -454,7 +447,7 @@ func (filter *ProbeFilter) GetProbes(
 // returns nil, err on error
 func GetProbe(
 	verbose bool,
-	id int,
+	id uint,
 ) (
 	*Probe,
 	error,
@@ -471,7 +464,7 @@ func GetProbe(
 	req.Header.Set("User-Agent", uaString)
 
 	if verbose {
-		fmt.Printf("API call: GET %s\n", req.URL)
+		fmt.Printf("# API call: GET %s\n", req.URL)
 	}
 	client := &http.Client{}
 	resp, err := client.Do(req)
@@ -480,8 +473,14 @@ func GetProbe(
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
-		return nil, nil
+	if resp.StatusCode != 200 {
+		// something went wrong; see if the error page can be parsed
+		var error ErrorResponse
+		err = json.NewDecoder(resp.Body).Decode(&error)
+		if err != nil {
+			return probe, err
+		}
+		return probe, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
 	}
 
 	// grab and store the actual content

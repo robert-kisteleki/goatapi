@@ -29,24 +29,4 @@ func TestAnchorFilterValidator(t *testing.T) {
 	if err != nil {
 		t.Errorf("Good country code '%s' is not allowed", goodcc)
 	}
-
-	filter = NewAnchorFilter()
-	filter.FilterID(-1)
-	err = filter.verifyFilters()
-	if err == nil {
-		t.Error("ID filter cannot be negative")
-	}
-	filter = NewAnchorFilter()
-	filter.FilterID(1)
-	err = filter.verifyFilters()
-	if err != nil {
-		t.Error("Correct ID filter is not allowed?")
-	}
-
-	filter = NewAnchorFilter()
-	filter.Limit(-1)
-	err = filter.verifyFilters()
-	if err == nil {
-		t.Error("Limit can be negative")
-	}
 }

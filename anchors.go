@@ -16,17 +16,17 @@ import (
 
 // Anchor object, as it comes from the API
 type Anchor struct {
-	ID              int         `json:"id"`
+	ID              uint        `json:"id"`
 	Address4        *netip.Addr `json:"ip_v4"`
-	ASN4            *int        `json:"as_v4"`
+	ASN4            *uint       `json:"as_v4"`
 	IPv4Gateway     *netip.Addr `json:"ip_v4_gateway"`
 	IPv4Netmask     *netip.Addr `json:"ip_v4_netmask"`
 	Address6        *netip.Addr `json:"ip_v6"`
-	ASN6            *int        `json:"as_v6"`
+	ASN6            *uint       `json:"as_v6"`
 	IPv6Gateway     *netip.Addr `json:"ip_v6_gateway"`
 	IPv6Netmask     *netip.Addr `json:"ip_v6_netmask"`
 	FQDN            string      `json:"fqdn"`
-	ProbeID         int         `json:"probe"`
+	ProbeID         uint        `json:"probe"`
 	CountryCode     string      `json:"country"`
 	City            string      `json:"city"`
 	Company         string      `json:"company"`
@@ -36,11 +36,11 @@ type Anchor struct {
 	Location        Geolocation `json:"geometry"`
 	Type            string      `json:"type"`
 	TLSARecord      string      `json:"tlsa_record"`
-	LiveSince       *isoTime    `json:"date_live"`
-	HardwareVersion int         `json:"hardware_version"`
+	LiveSince       *uniTime    `json:"date_live"`
+	HardwareVersion uint        `json:"hardware_version"`
 }
 
-// Translate the ancor version (code) into something more understandable
+// Translate the anchor version (code) into something more understandable
 func (anchor *Anchor) decodeHardwareVersion() string {
 	switch anchor.HardwareVersion {
 	case 1:
@@ -66,8 +66,8 @@ func (anchor *Anchor) ShortString() string {
 		anchor.FQDN,
 	)
 
-	text += appendValueOrNA("AS", false, anchor.ASN4)
-	text += appendValueOrNA("AS", false, anchor.ASN6)
+	text += valueOrNA("AS", false, anchor.ASN4)
+	text += valueOrNA("AS", false, anchor.ASN6)
 	text += fmt.Sprintf("\t%v", anchor.Location.Coordinates)
 
 	return text
@@ -77,8 +77,8 @@ func (anchor *Anchor) ShortString() string {
 func (anchor *Anchor) LongString() string {
 	text := anchor.ShortString()
 
-	text += appendValueOrNA("", false, anchor.Address4)
-	text += appendValueOrNA("", false, anchor.Address6)
+	text += valueOrNA("", false, anchor.Address4)
+	text += valueOrNA("", false, anchor.Address6)
 	if anchor.NicHandle != "" {
 		text += "\t" + anchor.NicHandle
 	} else {
@@ -97,7 +97,7 @@ func (anchor *Anchor) LongString() string {
 
 // the API paginates; this describes one such page
 type anchorListingPage struct {
-	Count    int      `json:"count"`
+	Count    uint     `json:"count"`
 	Next     string   `json:"next"`
 	Previous string   `json:"previous"`
 	Anchors  []Anchor `json:"results"`
@@ -106,8 +106,8 @@ type anchorListingPage struct {
 // AnchorFilter struct holds specified filters and other options
 type AnchorFilter struct {
 	params url.Values
-	id     int
-	limit  int
+	id     uint
+	limit  uint
 }
 
 // NewAnchorFilter prepares a new anchor filter object
@@ -118,7 +118,7 @@ func NewAnchorFilter() AnchorFilter {
 }
 
 // FilterID filters by a particular anchor ID
-func (filter *AnchorFilter) FilterID(id int) {
+func (filter *AnchorFilter) FilterID(id uint) {
 	filter.id = id
 }
 
@@ -133,17 +133,17 @@ func (filter *AnchorFilter) FilterSearch(text string) {
 }
 
 // FilterASN4 filters for an ASN in IPv4 space
-func (filter *AnchorFilter) FilterASN4(as int) {
+func (filter *AnchorFilter) FilterASN4(as uint) {
 	filter.params.Add("as_v4", fmt.Sprint(as))
 }
 
 // FilterASN6 filters for an ASN in IPv6 space
-func (filter *AnchorFilter) FilterASN6(as int) {
+func (filter *AnchorFilter) FilterASN6(as uint) {
 	filter.params.Add("as_v6", fmt.Sprint(as))
 }
 
 // Limit limits the number of result retrieved
-func (filter *AnchorFilter) Limit(max int) {
+func (filter *AnchorFilter) Limit(max uint) {
 	filter.limit = max
 }
 
@@ -157,13 +157,6 @@ func (filter *AnchorFilter) verifyFilters() error {
 		}
 	}
 
-	if filter.limit < 0 {
-		return fmt.Errorf("limit must not be negative")
-	}
-	if filter.id < 0 {
-		return fmt.Errorf("ID must not be negative")
-	}
-
 	return nil
 }
 
@@ -171,7 +164,7 @@ func (filter *AnchorFilter) verifyFilters() error {
 func (filter *AnchorFilter) GetAnchorCount(
 	verbose bool,
 ) (
-	count int,
+	count uint,
 	err error,
 ) {
 	// sanity checks - late in the process, but not too late
@@ -191,7 +184,7 @@ func (filter *AnchorFilter) GetAnchorCount(
 	req.Header.Set("User-Agent", uaString)
 
 	if verbose {
-		fmt.Printf("API call: GET %s\n", req.URL)
+		fmt.Printf("# API call: GET %s\n", req.URL)
 	}
 
 	client := &http.Client{}
@@ -251,7 +244,7 @@ func (filter *AnchorFilter) GetAnchors(
 	// results are paginated with next=
 	for {
 		if verbose {
-			fmt.Printf("API call: GET %s\n", req.URL)
+			fmt.Printf("# API call: GET %s\n", req.URL)
 		}
 
 		client := &http.Client{}
@@ -269,14 +262,14 @@ func (filter *AnchorFilter) GetAnchors(
 		}
 
 		// add elements to the list while observing the limit
-		if filter.limit != 0 && len(anchors)+len(page.Anchors) > filter.limit {
-			anchors = append(anchors, page.Anchors[:filter.limit-len(anchors)]...)
+		if filter.limit != 0 && uint(len(anchors)+len(page.Anchors)) > filter.limit {
+			anchors = append(anchors, page.Anchors[:filter.limit-uint(len(anchors))]...)
 		} else {
 			anchors = append(anchors, page.Anchors...)
 		}
 
 		// no next page or got to exactly the limit => we're done
-		if page.Next == "" || len(anchors) == filter.limit {
+		if page.Next == "" || uint(len(anchors)) == filter.limit {
 			break
 		}
 
@@ -298,7 +291,7 @@ func (filter *AnchorFilter) GetAnchors(
 // returns _, err on error
 func GetAnchor(
 	verbose bool,
-	id int,
+	id uint,
 ) (
 	anchor *Anchor,
 	err error,
@@ -322,9 +315,14 @@ func GetAnchor(
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode == 404 {
-		anchor = nil
-		return
+	if resp.StatusCode != 200 {
+		// something went wrong; see if the error page can be parsed
+		var error ErrorResponse
+		err = json.NewDecoder(resp.Body).Decode(&error)
+		if err != nil {
+			return anchor, err
+		}
+		return anchor, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
 	}
 
 	// grab and store the actual content

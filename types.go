@@ -8,6 +8,7 @@ package goatapi
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -37,9 +38,9 @@ type ErrorDetail struct {
 	Code   int    `json:"code"`
 }
 
-// appendValueOrNA turns various types into a string if they have values
-// (i.e. pinter is not nil) or "N/A" otherwise
-func appendValueOrNA[T any](prefix string, quote bool, val *T) string {
+// valueOrNA turns various types into a string if they have values
+// (i.e. pointer is not nil) or "N/A" otherwise
+func valueOrNA[T any](prefix string, quote bool, val *T) string {
 	if val != nil {
 		if quote {
 			return fmt.Sprintf("\t\"%s%v\"", prefix, *val)
@@ -51,10 +52,18 @@ func appendValueOrNA[T any](prefix string, quote bool, val *T) string {
 	}
 }
 
-// a datetime type that can be unmarshaled from ISO-8601 (without Z) datetime format
-type isoTime time.Time
+// a datetime type that can be unmarshaled from UNIX epoch *or* ISO times
+type uniTime time.Time
 
-func (ut *isoTime) UnmarshalJSON(data []byte) error {
+func (ut *uniTime) UnmarshalJSON(data []byte) error {
+	// try parsing as UNIX epoch first
+	epoch, err := strconv.Atoi(string(data))
+	if err == nil {
+		*ut = uniTime(time.Unix(int64(epoch), 0))
+		return nil
+	}
+
+	// try parsing ISO8601(Z)
 	layout := "2006-01-02T15:04:05"
 	noquote := strings.ReplaceAll(string(data), "\"", "")
 	noz := strings.ReplaceAll(noquote, "Z", "")
@@ -62,11 +71,11 @@ func (ut *isoTime) UnmarshalJSON(data []byte) error {
 	if err != nil {
 		return err
 	}
-	*ut = isoTime(unix)
+	*ut = uniTime(unix)
 	return nil
 }
 
-// default output format for isoTime type is ISO8601Z
-func (ut isoTime) String() string {
-	return time.Time(ut).Format("2006-01-02T15:04:05Z")
+// default output format for uniTime type is ISO8601
+func (ut uniTime) String() string {
+	return time.Time(ut).UTC().Format(time.RFC3339)
 }

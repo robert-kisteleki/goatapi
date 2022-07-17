@@ -13,20 +13,7 @@ import (
 // Test if the filter validator does a decent job
 func TestProbeFilterValidator(t *testing.T) {
 	var err error
-	var filter ProbeFilter
-
-	filter = NewProbeFilter()
-	filter.FilterID(-1)
-	err = filter.verifyFilters()
-	if err == nil {
-		t.Fatalf("ID filter cannot be negative")
-	}
-	filter = NewProbeFilter()
-	filter.FilterID(1)
-	err = filter.verifyFilters()
-	if err != nil {
-		t.Fatalf("Correct ID filter is not allowed?")
-	}
+	var filter *ProbeFilter
 
 	badtag := "*"
 	goodtag := "ooo"
@@ -63,12 +50,5 @@ func TestProbeFilterValidator(t *testing.T) {
 	err = filter.verifyFilters()
 	if err == nil {
 		t.Fatalf("Sort order is not filtered properly")
-	}
-
-	filter = NewProbeFilter()
-	filter.Limit(-1)
-	err = filter.verifyFilters()
-	if err == nil {
-		t.Fatalf("Limit can be negative")
 	}
 }
