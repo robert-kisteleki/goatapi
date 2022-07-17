@@ -1,12 +1,15 @@
 # goatapi - Go (RIPE) Atlas Tools - API Library
 
 goatapi is a Go package to interact with [RIPE Atlas](https://atlas.ripe.net/) [APIs](https://atlas.ripe.net/api/v2/)
-using [Golang](https://go.dev/). It is similar to [Cousteau](https://github.com/RIPE-NCC/ripe-atlas-cousteau).
+using [Golang](https://go.dev/). It is similar to [Cousteau](https://github.com/RIPE-NCC/ripe-atlas-cousteau) and
+[Sagan](https://github.com/RIPE-NCC/ripe-atlas-sagan) combined.
 
 It supports:
 * finding probes
 * finding anchors
 * finding measurements
+* downloading results of measurements and turning them into Go objects
+* loading a local file containing measurement results and turning them into Go objects
 * (more features to come)
 
 The tool needs Go 1.18 to compile.
@@ -26,7 +29,7 @@ be run by any user.
 
 ### Count Probes Matching Some Criteria
 
-```
+```go
 	filter := goatapi.NewProbeFilter()
 	filter.FilterCountry("NL")
 	filter.FilterPublic(true)
@@ -40,7 +43,7 @@ be run by any user.
 
 ### Search for Probes
 
-```
+```go
 	filter := goatapi.NewProbeFilter()
 	filter.FilterCountry("NL")
 	filter.Sort("-id")
@@ -56,7 +59,7 @@ be run by any user.
 
 ### Get a Particular Probe
 
-```
+```go
 	filter := goatapi.NewProbeFilter()
 	filter.FilterID(10001)
 	probe, err := filter.GetProbe(false)
@@ -72,7 +75,7 @@ be run by any user.
 
 ### Count Anchors Matching Some Criteria
 
-```
+```go
 	filter := goatapi.NewAnchorFilter()
 	filter.FilterCountry("NL")
 	count, err := filter.GetAnchorCount(false)
@@ -85,7 +88,7 @@ be run by any user.
 
 ### Search for Anchors
 
-```
+```go
 	filter := goatapi.NewAnchorFilter()
 	filter.FilterCountry("NL")
 	probes, err := filter.GetAnchors(false)
@@ -100,7 +103,7 @@ be run by any user.
 
 ### Get a Particular Anchor
 
-```
+```go
 	filter := goatapi.NewAnchorFilter()
 	filter.FilterID(1)
 	anchor, err := filter.GetAnchor(false)
@@ -115,7 +118,7 @@ be run by any user.
 
 ### Count Measurements Matching Some Criteria
 
-```
+```go
 	filter := goatapi.NewMeasurementFilter()
 	filter.FilterTarget(netip.ParsePrefix("193.0.0.0/19"))
 	filter.FilterType("ping")
@@ -130,7 +133,7 @@ be run by any user.
 
 ### Search for Measurements
 
-```
+```go
 	filter := goatapi.NewMeasurementFilter()
 	filter.FilterTarget(netip.ParsePrefix("193.0.0.0/19"))
 	filter.FilterType("ping")
@@ -148,7 +151,7 @@ be run by any user.
 
 ### Get a Particular Measurement
 
-```
+```go
 	filter := goatapi.NewMeasurementFilter()
 	filter.FilterID(1001)
 	msm, err := filter.GetMeasurement(false)
@@ -159,11 +162,55 @@ be run by any user.
 	fmt.Println(msm.ShortString())
 ```
 
+## Processing results
+
+All result types are defined as object types (PingResult, TracerouteResult, DnsResult, ...). The Go types try to be more useful than what the API natively provides, i.e. there's a translation from what the API gives to objects that have more meaning and simpler to understand fields and methods.
+
+Results can be fetched into an array, or via a channel (which is much preferred / recommended!). The filter support measurement ID, start/end time, probe IDs, "latest" results and combinations of these.
+
+**Note: this is alpha level code. Some fields are probably mis-interpreted, old result versions are not processed correctly, a lot of corner cases are likely not handled properly and some objects should be passed as pointers instead. There's possibly a lot of work to be done here.**
+
+An example of retrieving and processing results from the API:
+
+```go
+	filter := goatapi.NewResultsFilter()
+	filter.FilterID(10001)
+	filter.FilterLatest()
+
+	results := make(chan result.AsyncResult)
+	go filter.GetResultsAsync(false, results) // false means verbose mode is off
+
+	for result := range results {
+		// do something with a result
+	}
+```
+
+An example of retrieving and processing results from a file:
+
+```go
+	filter := goatapi.NewResultsFilter()
+	filter.FilterFile("-") // stdin, one can also use a proper file name
+	// note: other filters can be added (namely start, stop and probe)
+
+	results := make(chan result.AsyncResult)
+	go filter.GetResultsAsync(false, results) // false means verbose mode is off
+
+	for result := range results {
+		// do something with a result
+	}
+```
+
+## Result types
+
+The `result` package contains various types to hold corresponding measurement result types:
+* `BaseResult` is the basis of all and contains the basic fields such as `MeasurementID`, `ProbeId`, `TimeStamp`, `Type` and such
+* `PingResult`, `TracerouteResult`, `DnsResult` etc. contain the type-specific fields
+
 # Future Additions / TODO
 
 * schedule a new measurement, stop existing measurements
 * modify participants of an existing measurement (add/remove probes)
-* fetch results for, or listen to real-time result stream of, an already scheduled measurement
+* listen to result stream of an already scheduled measurement
 * check credit balance, transfer credits, ...
 
 # Copyright, Contributing
