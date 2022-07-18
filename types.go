@@ -104,8 +104,6 @@ func parseAPIError(resp *http.Response) error {
 		return err
 	}
 
-	fmt.Println(decoded)
-
 	if decoded.Status != 0 {
 		r := make([]string, 0)
 		r = append(r, decoded.Title)
