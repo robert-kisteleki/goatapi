@@ -11,7 +11,7 @@ import (
 	"strings"
 )
 
-const version = "v0.2.0-dev"
+const version = "v0.2.0"
 
 var uaString = "goatAPI " + version
 var apiBaseURL = "https://atlas.ripe.net/api/v2/"
