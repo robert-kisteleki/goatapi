@@ -316,13 +316,7 @@ func GetAnchor(
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		// something went wrong; see if the error page can be parsed
-		var error ErrorResponse
-		err = json.NewDecoder(resp.Body).Decode(&error)
-		if err != nil {
-			return anchor, err
-		}
-		return anchor, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
+		return nil, parseAPIError(resp)
 	}
 
 	// grab and store the actual content

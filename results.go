@@ -8,7 +8,6 @@ package goatapi
 
 import (
 	"bufio"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
@@ -277,13 +276,7 @@ func (filter *ResultsFilter) openNetworkResults(
 	}
 
 	if resp.StatusCode != 200 {
-		// something went wrong; see if the error page can be parsed
-		var error ErrorResponse
-		err = json.NewDecoder(resp.Body).Decode(&error)
-		if err != nil {
-			return nil, err
-		}
-		return nil, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
+		return nil, parseAPIError(resp)
 	}
 
 	// we're reading one result per line, a scanner is simple enough

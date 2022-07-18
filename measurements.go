@@ -556,13 +556,7 @@ func (filter *MeasurementFilter) GetMeasurements(
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			// something went wrong; see if the error page can be parsed
-			var error ErrorResponse
-			err = json.NewDecoder(resp.Body).Decode(&error)
-			if err != nil {
-				return measurements, err
-			}
-			return measurements, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
+			return nil, parseAPIError(resp)
 		}
 
 		// grab and store the actual content
@@ -629,13 +623,7 @@ func GetMeasurement(
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		// something went wrong; see if the error page can be parsed
-		var error ErrorResponse
-		err = json.NewDecoder(resp.Body).Decode(&error)
-		if err != nil {
-			return measurement, err
-		}
-		return measurement, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
+		return nil, parseAPIError(resp)
 	}
 
 	// grab and store the actual content
