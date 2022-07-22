@@ -21,7 +21,7 @@ type Result interface {
 }
 
 type AsyncResult struct {
-	Result Result
+	Result *Result
 	Error  error
 }
 

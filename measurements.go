@@ -57,6 +57,11 @@ type ParticipantProbe struct {
 	ID uint `json:"id"`
 }
 
+type AsyncMeasurementResult struct {
+	Measurement *Measurement
+	Error       error
+}
+
 // MeasurementListSortOrders lists all the allowed sort orders
 var MeasurementListSortOrders = []string{
 	"id", "-id",
@@ -498,28 +503,29 @@ func (filter *MeasurementFilter) GetMeasurementCount(
 	return page.Count, nil
 }
 
-// GetMeasurements returns an bunch of measurements by filtering
+// GetMeasurements returns a bunch of measurements by filtering
+// Results (or an error) appear on a channel
 func (filter *MeasurementFilter) GetMeasurements(
 	verbose bool,
-) (
-	measurements []Measurement,
-	err error,
+	measurements chan AsyncMeasurementResult,
 ) {
-	// sanity checks - late in the process, but not too late
-	err = filter.verifyFilters()
-	if err != nil {
-		return
-	}
+	defer close(measurements)
 
 	// special case: a specific ID was "filtered"
 	if filter.id != 0 {
-		measurement, errx := GetMeasurement(verbose, filter.id, filter.key)
-		if errx != nil {
-			err = errx
+		msm, err := GetMeasurement(verbose, filter.id, filter.key)
+		if err != nil {
+			measurements <- AsyncMeasurementResult{nil, err}
 			return
 		}
-		measurements = make([]Measurement, 1)
-		measurements[0] = *measurement
+		measurements <- AsyncMeasurementResult{msm, nil}
+		return
+	}
+
+	// sanity checks - late in the process, but not too late
+	err := filter.verifyFilters()
+	if err != nil {
+		measurements <- AsyncMeasurementResult{nil, err}
 		return
 	}
 
@@ -531,41 +537,45 @@ func (filter *MeasurementFilter) GetMeasurements(
 
 	resp, err := apiGetRequest(verbose, query, filter.key)
 
-	// results are paginated with next= (and previoous=)
+	var total uint = 0
+	// results are paginated with next= (and previous=)
 	for {
 		if err != nil {
-			return nil, err
+			measurements <- AsyncMeasurementResult{nil, err}
+			return
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			return nil, parseAPIError(resp)
+			measurements <- AsyncMeasurementResult{nil, parseAPIError(resp)}
+			return
 		}
 
 		// grab and store the actual content
 		var page measurementListingPage
 		err = json.NewDecoder(resp.Body).Decode(&page)
 		if err != nil {
-			return measurements, err
+			measurements <- AsyncMeasurementResult{nil, err}
+			return
 		}
 
-		// add elements to the list while observing the limit
-		if filter.limit != 0 && uint(len(measurements)+len(page.Measurements)) > filter.limit {
-			measurements = append(measurements, page.Measurements[:filter.limit-uint(len(measurements))]...)
-		} else {
-			measurements = append(measurements, page.Measurements...)
+		// return items while observing the limit
+		for _, msm := range page.Measurements {
+			measurements <- AsyncMeasurementResult{&msm, nil}
+			total++
+			if total >= filter.limit {
+				return
+			}
 		}
 
-		// no next page or got to exactly the limit => we're done
-		if page.Next == "" || uint(len(measurements)) == filter.limit {
+		// no next page => we're done
+		if page.Next == "" {
 			break
 		}
 
 		// just follow the next link
 		resp, err = apiGetRequest(verbose, page.Next, filter.key)
 	}
-
-	return measurements, nil
 }
 
 // GetMeasurement retrieves data for a single measurement, by ID
@@ -582,9 +592,9 @@ func GetMeasurement(
 ) {
 	var measurement *Measurement
 
-	measurementurl := fmt.Sprintf("%smeasurements/%d/", apiBaseURL, id)
+	query := fmt.Sprintf("%smeasurements/%d/", apiBaseURL, id)
 
-	resp, err := apiGetRequest(verbose, measurementurl, key)
+	resp, err := apiGetRequest(verbose, query, key)
 	if err != nil {
 		return nil, err
 	}

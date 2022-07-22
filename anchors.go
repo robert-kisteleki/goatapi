@@ -39,6 +39,11 @@ type Anchor struct {
 	HardwareVersion uint        `json:"hardware_version"`
 }
 
+type AsyncAnchorResult struct {
+	Anchor *Anchor
+	Error  error
+}
+
 // Translate the anchor version (code) into something more understandable
 func (anchor *Anchor) decodeHardwareVersion() string {
 	switch anchor.HardwareVersion {
@@ -192,30 +197,29 @@ func (filter *AnchorFilter) GetAnchorCount(
 	return page.Count, nil
 }
 
-// GetAnchors returns an bunch of anchors by applying all the specified filters
+// GetAnchors returns a bunch of anchors by filtering
+// Results (or an error) appear on a channel
 func (filter *AnchorFilter) GetAnchors(
 	verbose bool,
-) (
-	anchors []Anchor,
-	err error,
+	anchors chan AsyncAnchorResult,
 ) {
+	defer close(anchors)
+
 	// special case: a specific ID was "filtered"
 	if filter.id != 0 {
-		anchor, errx := GetAnchor(verbose, filter.id)
-		if errx != nil {
-			err = errx
+		anchor, err := GetAnchor(verbose, filter.id)
+		if err != nil {
+			anchors <- AsyncAnchorResult{nil, err}
 			return
 		}
-		anchors = make([]Anchor, 0)
-		if anchor != nil {
-			anchors = append(anchors, *anchor)
-		}
+		anchors <- AsyncAnchorResult{anchor, nil}
 		return
 	}
 
 	// sanity checks - late in the process, but not too late
-	err = filter.verifyFilters()
+	err := filter.verifyFilters()
 	if err != nil {
+		anchors <- AsyncAnchorResult{nil, err}
 		return
 	}
 
@@ -223,37 +227,43 @@ func (filter *AnchorFilter) GetAnchors(
 
 	resp, err := apiGetRequest(verbose, query, nil)
 
-	// results are paginated with next=
+	// results are paginated with next= (and previous=)
+	var total uint = 0
 	for {
 		if err != nil {
-			return nil, err
+			anchors <- AsyncAnchorResult{nil, err}
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 {
+			anchors <- AsyncAnchorResult{nil, err}
+			return
+		}
 
 		// grab and store the actual content
 		var page anchorListingPage
 		err = json.NewDecoder(resp.Body).Decode(&page)
 		if err != nil {
-			return anchors, err
+			anchors <- AsyncAnchorResult{nil, err}
 		}
 
-		// add elements to the list while observing the limit
-		if filter.limit != 0 && uint(len(anchors)+len(page.Anchors)) > filter.limit {
-			anchors = append(anchors, page.Anchors[:filter.limit-uint(len(anchors))]...)
-		} else {
-			anchors = append(anchors, page.Anchors...)
+		// return items while observing the limit
+		for _, anchor := range page.Anchors {
+			anchors <- AsyncAnchorResult{&anchor, nil}
+			total++
+			if total >= filter.limit {
+				return
+			}
 		}
 
-		// no next page or got to exactly the limit => we're done
-		if page.Next == "" || uint(len(anchors)) == filter.limit {
+		// no next page => we're done
+		if page.Next == "" {
 			break
 		}
 
 		// just follow the next link
 		resp, err = apiGetRequest(verbose, page.Next, nil)
 	}
-
-	return anchors, nil
 }
 
 // GetAnchor retrieves data for a single anchor, by ID

@@ -99,55 +99,19 @@ func (filter *ResultsFilter) verifyFilters() error {
 	return nil
 }
 
-// GetResults returns results in a slice by applying the specified filters
+// GetResult returns results by filtering
+// Results (or an error) appear on a channel
 func (filter *ResultsFilter) GetResults(
-	verbose bool,
-) (
-	results []result.Result,
-	err error,
-) {
-	// prepare to read results
-	read, err := filter.openNetworkResults(verbose)
-	if err != nil {
-		return nil, err
-	}
-
-	var fetched uint = 0
-	typehint := ""
-	for read.Scan() && fetched < filter.limit {
-		line := read.Text()
-
-		res, err := result.ParseWithTypeHint(line, typehint)
-		if err != nil {
-			return results, err
-		}
-
-		// add the result to the result set
-		results = append(results, res)
-
-		fetched++
-
-		// a type hint makes parsing much faster
-		if typehint == "" {
-			typehint = res.TypeName()
-		}
-	}
-
-	return results, nil
-}
-
-// GetResultsAsync returns results from the API or a file via a channel
-func (filter *ResultsFilter) GetResultsAsync(
 	verbose bool,
 	results chan result.AsyncResult,
 ) {
 	if filter.id != 0 {
-		filter.GetNetworkResultsAsync(verbose, results)
+		filter.GetNetworkResults(verbose, results)
 	} else {
 		if filter.file != "" {
-			filter.GetFileResultsAsync(verbose, results)
+			filter.GetFileResults(verbose, results)
 		} else {
-			results <- result.AsyncResult{Result: nil, Error: fmt.Errorf("neither ID nor input file were specified")}
+			results <- result.AsyncResult{nil, fmt.Errorf("neither ID nor input file were specified")}
 			close(results)
 		}
 	}
@@ -155,7 +119,7 @@ func (filter *ResultsFilter) GetResultsAsync(
 
 // GetNetworkResultsAsync returns results from the API
 // via a channel by applying the specified filters
-func (filter *ResultsFilter) GetNetworkResultsAsync(
+func (filter *ResultsFilter) GetNetworkResults(
 	verbose bool,
 	results chan result.AsyncResult,
 ) {
@@ -164,7 +128,7 @@ func (filter *ResultsFilter) GetNetworkResultsAsync(
 	// prepare to read results
 	read, err := filter.openNetworkResults(verbose)
 	if err != nil {
-		results <- result.AsyncResult{Result: nil, Error: err}
+		results <- result.AsyncResult{nil, err}
 		return
 	}
 
@@ -173,7 +137,7 @@ func (filter *ResultsFilter) GetNetworkResultsAsync(
 
 // GetFileResultsAsync returns results from a file via a channel
 // If the file is "-" then it reads from stdin
-func (filter *ResultsFilter) GetFileResultsAsync(
+func (filter *ResultsFilter) GetFileResults(
 	verbose bool,
 	results chan result.AsyncResult,
 ) {
@@ -189,7 +153,7 @@ func (filter *ResultsFilter) GetFileResultsAsync(
 		var err error
 		file, err = os.Open(filter.file)
 		if err != nil {
-			results <- result.AsyncResult{Result: nil, Error: err}
+			results <- result.AsyncResult{nil, err}
 			return
 		}
 		defer file.Close()
@@ -216,7 +180,7 @@ func (filter *ResultsFilter) getResultsAsync(
 
 		res, err := result.ParseWithTypeHint(line, typehint)
 		if err != nil {
-			results <- result.AsyncResult{Result: nil, Error: err}
+			results <- result.AsyncResult{nil, err}
 			continue
 		}
 
@@ -226,7 +190,7 @@ func (filter *ResultsFilter) getResultsAsync(
 		if (filter.start == nil || filter.start.Before(ts.Add(time.Duration(1)))) &&
 			(filter.stop == nil || filter.stop.After(ts.Add(time.Duration(-1)))) &&
 			(len(filter.probes) == 0 || slices.Contains(filter.probes, res.GetProbeID())) {
-			results <- result.AsyncResult{Result: res, Error: nil}
+			results <- result.AsyncResult{&res, nil}
 			fetched++
 		}
 
