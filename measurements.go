@@ -529,27 +529,10 @@ func (filter *MeasurementFilter) GetMeasurements(
 	}
 	query += "?" + filter.params.Encode()
 
-	req, err := http.NewRequest("GET", query, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
-	if filter.key != nil {
-		req.Header.Set("Authorization", "Key "+filter.key.String())
-	}
+	resp, err := apiGetRequest(verbose, query, filter.key)
 
 	// results are paginated with next= (and previoous=)
 	for {
-		if verbose {
-			msg := fmt.Sprintf("# API call: GET %s", req.URL)
-			if filter.key != nil {
-				msg += fmt.Sprintf(" (using API key %s...)", filter.key.String()[:8])
-			}
-			fmt.Println(msg)
-		}
-		client := &http.Client{}
-		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -578,13 +561,8 @@ func (filter *MeasurementFilter) GetMeasurements(
 			break
 		}
 
-		// just follow th enext link
-		req, err = http.NewRequest("GET", page.Next, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", uaString)
+		// just follow the next link
+		resp, err = apiGetRequest(verbose, page.Next, filter.key)
 	}
 
 	return measurements, nil
@@ -605,18 +583,7 @@ func GetMeasurement(
 
 	measurementurl := fmt.Sprintf("%smeasurements/%d/", apiBaseURL, id)
 
-	req, err := http.NewRequest("GET", measurementurl, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
-
-	if verbose {
-		fmt.Printf("# API call: GET %s\n", req.URL)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiGetRequest(verbose, measurementurl, nil)
 	if err != nil {
 		return nil, err
 	}

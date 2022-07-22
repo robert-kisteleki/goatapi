@@ -9,7 +9,6 @@ package goatapi
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/netip"
 	"net/url"
 	"regexp"
@@ -335,19 +334,7 @@ func (filter *ProbeFilter) GetProbeCount(
 	// counting needs application of the specified filters
 	query := apiBaseURL + "probes/?" + filter.params.Encode()
 
-	req, err := http.NewRequest("GET", query, nil)
-	if err != nil {
-		return 0, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
-
-	// results are paginated with next= (and previous=)
-	if verbose {
-		fmt.Printf("# API call: GET %s\n", req.URL)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiGetRequest(verbose, query, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -391,20 +378,10 @@ func (filter *ProbeFilter) GetProbes(
 
 	query := apiBaseURL + "probes/?" + filter.params.Encode()
 
-	req, err := http.NewRequest("GET", query, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
+	resp, err := apiGetRequest(verbose, query, nil)
 
 	// results are paginated with next= (and previoous=)
 	for {
-		if verbose {
-			fmt.Printf("# API call: GET %s\n", req.URL)
-		}
-		client := &http.Client{}
-		resp, err := client.Do(req)
 		if err != nil {
 			return nil, err
 		}
@@ -429,13 +406,8 @@ func (filter *ProbeFilter) GetProbes(
 			break
 		}
 
-		// just follow th enext link
-		req, err = http.NewRequest("GET", page.Next, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", uaString)
+		// just follow the next link
+		resp, err = apiGetRequest(verbose, page.Next, nil)
 	}
 
 	return probes, nil
@@ -454,20 +426,9 @@ func GetProbe(
 ) {
 	var probe *Probe
 
-	probeurl := fmt.Sprintf("%sprobes/%d/", apiBaseURL, id)
+	query := fmt.Sprintf("%sprobes/%d/", apiBaseURL, id)
 
-	req, err := http.NewRequest("GET", probeurl, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
-
-	if verbose {
-		fmt.Printf("# API call: GET %s\n", req.URL)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiGetRequest(verbose, query, nil)
 	if err != nil {
 		return nil, err
 	}
