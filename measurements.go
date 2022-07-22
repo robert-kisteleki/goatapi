@@ -513,7 +513,7 @@ func (filter *MeasurementFilter) GetMeasurements(
 
 	// special case: a specific ID was "filtered"
 	if filter.id != 0 {
-		measurement, errx := GetMeasurement(verbose, filter.id)
+		measurement, errx := GetMeasurement(verbose, filter.id, filter.key)
 		if errx != nil {
 			err = errx
 			return
@@ -575,6 +575,7 @@ func (filter *MeasurementFilter) GetMeasurements(
 func GetMeasurement(
 	verbose bool,
 	id uint,
+	key *uuid.UUID,
 ) (
 	*Measurement,
 	error,
@@ -583,7 +584,7 @@ func GetMeasurement(
 
 	measurementurl := fmt.Sprintf("%smeasurements/%d/", apiBaseURL, id)
 
-	resp, err := apiGetRequest(verbose, measurementurl, nil)
+	resp, err := apiGetRequest(verbose, measurementurl, key)
 	if err != nil {
 		return nil, err
 	}
