@@ -58,7 +58,7 @@ type ParticipantProbe struct {
 }
 
 type AsyncMeasurementResult struct {
-	Measurement *Measurement
+	Measurement Measurement
 	Error       error
 }
 
@@ -515,17 +515,17 @@ func (filter *MeasurementFilter) GetMeasurements(
 	if filter.id != 0 {
 		msm, err := GetMeasurement(verbose, filter.id, filter.key)
 		if err != nil {
-			measurements <- AsyncMeasurementResult{nil, err}
+			measurements <- AsyncMeasurementResult{Measurement{}, err}
 			return
 		}
-		measurements <- AsyncMeasurementResult{msm, nil}
+		measurements <- AsyncMeasurementResult{*msm, nil}
 		return
 	}
 
 	// sanity checks - late in the process, but not too late
 	err := filter.verifyFilters()
 	if err != nil {
-		measurements <- AsyncMeasurementResult{nil, err}
+		measurements <- AsyncMeasurementResult{Measurement{}, err}
 		return
 	}
 
@@ -541,13 +541,13 @@ func (filter *MeasurementFilter) GetMeasurements(
 	// results are paginated with next= (and previous=)
 	for {
 		if err != nil {
-			measurements <- AsyncMeasurementResult{nil, err}
+			measurements <- AsyncMeasurementResult{Measurement{}, err}
 			return
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			measurements <- AsyncMeasurementResult{nil, parseAPIError(resp)}
+			measurements <- AsyncMeasurementResult{Measurement{}, parseAPIError(resp)}
 			return
 		}
 
@@ -555,13 +555,13 @@ func (filter *MeasurementFilter) GetMeasurements(
 		var page measurementListingPage
 		err = json.NewDecoder(resp.Body).Decode(&page)
 		if err != nil {
-			measurements <- AsyncMeasurementResult{nil, err}
+			measurements <- AsyncMeasurementResult{Measurement{}, err}
 			return
 		}
 
 		// return items while observing the limit
 		for _, msm := range page.Measurements {
-			measurements <- AsyncMeasurementResult{&msm, nil}
+			measurements <- AsyncMeasurementResult{msm, nil}
 			total++
 			if total >= filter.limit {
 				return

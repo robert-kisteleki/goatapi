@@ -40,7 +40,7 @@ type Anchor struct {
 }
 
 type AsyncAnchorResult struct {
-	Anchor *Anchor
+	Anchor Anchor
 	Error  error
 }
 
@@ -209,17 +209,17 @@ func (filter *AnchorFilter) GetAnchors(
 	if filter.id != 0 {
 		anchor, err := GetAnchor(verbose, filter.id)
 		if err != nil {
-			anchors <- AsyncAnchorResult{nil, err}
+			anchors <- AsyncAnchorResult{Anchor{}, err}
 			return
 		}
-		anchors <- AsyncAnchorResult{anchor, nil}
+		anchors <- AsyncAnchorResult{*anchor, nil}
 		return
 	}
 
 	// sanity checks - late in the process, but not too late
 	err := filter.verifyFilters()
 	if err != nil {
-		anchors <- AsyncAnchorResult{nil, err}
+		anchors <- AsyncAnchorResult{Anchor{}, err}
 		return
 	}
 
@@ -231,12 +231,12 @@ func (filter *AnchorFilter) GetAnchors(
 	var total uint = 0
 	for {
 		if err != nil {
-			anchors <- AsyncAnchorResult{nil, err}
+			anchors <- AsyncAnchorResult{Anchor{}, err}
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			anchors <- AsyncAnchorResult{nil, err}
+			anchors <- AsyncAnchorResult{Anchor{}, err}
 			return
 		}
 
@@ -244,12 +244,12 @@ func (filter *AnchorFilter) GetAnchors(
 		var page anchorListingPage
 		err = json.NewDecoder(resp.Body).Decode(&page)
 		if err != nil {
-			anchors <- AsyncAnchorResult{nil, err}
+			anchors <- AsyncAnchorResult{Anchor{}, err}
 		}
 
 		// return items while observing the limit
 		for _, anchor := range page.Anchors {
-			anchors <- AsyncAnchorResult{&anchor, nil}
+			anchors <- AsyncAnchorResult{anchor, nil}
 			total++
 			if total >= filter.limit {
 				return

@@ -41,7 +41,7 @@ type Probe struct {
 }
 
 type AsyncProbeResult struct {
-	Probe *Probe
+	Probe Probe
 	Error error
 }
 
@@ -368,16 +368,16 @@ func (filter *ProbeFilter) GetProbes(
 	if filter.id != 0 {
 		probe, err := GetProbe(verbose, filter.id)
 		if err != nil {
-			probes <- AsyncProbeResult{nil, err}
+			probes <- AsyncProbeResult{Probe{}, err}
 		}
-		probes <- AsyncProbeResult{probe, nil}
+		probes <- AsyncProbeResult{*probe, nil}
 		return
 	}
 
 	// sanity checks - late in the process, but not too late
 	err := filter.verifyFilters()
 	if err != nil {
-		probes <- AsyncProbeResult{nil, err}
+		probes <- AsyncProbeResult{Probe{}, err}
 		return
 	}
 
@@ -389,13 +389,13 @@ func (filter *ProbeFilter) GetProbes(
 	var total uint = 0
 	for {
 		if err != nil {
-			probes <- AsyncProbeResult{nil, err}
+			probes <- AsyncProbeResult{Probe{}, err}
 			return
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			probes <- AsyncProbeResult{nil, parseAPIError(resp)}
+			probes <- AsyncProbeResult{Probe{}, parseAPIError(resp)}
 			return
 		}
 
@@ -403,12 +403,12 @@ func (filter *ProbeFilter) GetProbes(
 		var page probeListingPage
 		err = json.NewDecoder(resp.Body).Decode(&page)
 		if err != nil {
-			probes <- AsyncProbeResult{nil, err}
+			probes <- AsyncProbeResult{Probe{}, err}
 		}
 
 		// return items while observing the limit
 		for _, probe := range page.Probes {
-			probes <- AsyncProbeResult{&probe, nil}
+			probes <- AsyncProbeResult{probe, nil}
 			total++
 			if total >= filter.limit {
 				return
