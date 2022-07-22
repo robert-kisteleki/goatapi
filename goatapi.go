@@ -51,7 +51,6 @@ func apiGetRequest(
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("Accept", "application/json")
 	req.Header.Set("User-Agent", uaString)
 	if key != nil {
 		req.Header.Set("Authorization", "Key "+(*key).String())

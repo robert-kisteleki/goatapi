@@ -9,7 +9,6 @@ package goatapi
 import (
 	"bufio"
 	"fmt"
-	"net/http"
 	"net/url"
 	"os"
 	"time"
@@ -259,18 +258,7 @@ func (filter *ResultsFilter) openNetworkResults(
 	}
 	query += fmt.Sprintf("?%s", filter.params.Encode())
 
-	req, err := http.NewRequest("GET", query, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("User-Agent", uaString)
-
-	if verbose {
-		fmt.Printf("# API call: GET %s\n", req.URL)
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiGetRequest(verbose, query, nil)
 	if err != nil {
 		return nil, err
 	}
