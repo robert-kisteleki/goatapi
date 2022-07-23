@@ -9,7 +9,6 @@ package goatapi
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/netip"
 	"net/url"
 	"regexp"
@@ -39,6 +38,11 @@ type Probe struct {
 	TotalUptime    uint          `json:"total_uptime"`
 	Type           string        `json:"type"`
 	Tags           []Tag         `json:"tags"`
+}
+
+type AsyncProbeResult struct {
+	Probe Probe
+	Error error
 }
 
 // ProbeListSortOrders lists all the allowed sort orders
@@ -335,19 +339,7 @@ func (filter *ProbeFilter) GetProbeCount(
 	// counting needs application of the specified filters
 	query := apiBaseURL + "probes/?" + filter.params.Encode()
 
-	req, err := http.NewRequest("GET", query, nil)
-	if err != nil {
-		return 0, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
-
-	// results are paginated with next= (and previous=)
-	if verbose {
-		fmt.Printf("# API call: GET %s\n", req.URL)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiGetRequest(verbose, query, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -364,81 +356,73 @@ func (filter *ProbeFilter) GetProbeCount(
 	return page.Count, nil
 }
 
-// GetProbes returns an bunch of probes by filtering
+// GetProbes returns a bunch of probes by filtering
+// Results (or an error) appear on a channel
 func (filter *ProbeFilter) GetProbes(
 	verbose bool,
-) (
-	probes []Probe,
-	err error,
+	probes chan AsyncProbeResult,
 ) {
+	defer close(probes)
+
 	// special case: a specific ID was "filtered"
 	if filter.id != 0 {
-		probe, errx := GetProbe(verbose, filter.id)
-		if errx != nil {
-			err = errx
-			return
+		probe, err := GetProbe(verbose, filter.id)
+		if err != nil {
+			probes <- AsyncProbeResult{Probe{}, err}
 		}
-		probes = make([]Probe, 1)
-		probes[0] = *probe
+		probes <- AsyncProbeResult{*probe, nil}
 		return
 	}
 
 	// sanity checks - late in the process, but not too late
-	err = filter.verifyFilters()
+	err := filter.verifyFilters()
 	if err != nil {
+		probes <- AsyncProbeResult{Probe{}, err}
 		return
 	}
 
 	query := apiBaseURL + "probes/?" + filter.params.Encode()
 
-	req, err := http.NewRequest("GET", query, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
+	resp, err := apiGetRequest(verbose, query, nil)
 
-	// results are paginated with next= (and previoous=)
+	// results are paginated with next= (and previous=)
+	var total uint = 0
 	for {
-		if verbose {
-			fmt.Printf("# API call: GET %s\n", req.URL)
-		}
-		client := &http.Client{}
-		resp, err := client.Do(req)
 		if err != nil {
-			return nil, err
+			probes <- AsyncProbeResult{Probe{}, err}
+			return
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 {
+			probes <- AsyncProbeResult{Probe{}, parseAPIError(resp)}
+			return
+		}
 
 		// grab and store the actual content
 		var page probeListingPage
 		err = json.NewDecoder(resp.Body).Decode(&page)
 		if err != nil {
-			return probes, err
+			probes <- AsyncProbeResult{Probe{}, err}
 		}
 
-		// add elements to the list while observing the limit
-		if filter.limit != 0 && uint(len(probes)+len(page.Probes)) > filter.limit {
-			probes = append(probes, page.Probes[:filter.limit-uint(len(probes))]...)
-		} else {
-			probes = append(probes, page.Probes...)
+		// return items while observing the limit
+		for _, probe := range page.Probes {
+			probes <- AsyncProbeResult{probe, nil}
+			total++
+			if total >= filter.limit {
+				return
+			}
 		}
 
 		// no next page or got to exactly the limit => we're done
-		if page.Next == "" || uint(len(probes)) == filter.limit {
+		if page.Next == "" {
 			break
 		}
 
-		// just follow th enext link
-		req, err = http.NewRequest("GET", page.Next, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", uaString)
+		// just follow the next link
+		resp, err = apiGetRequest(verbose, page.Next, nil)
 	}
-
-	return probes, nil
 }
 
 // GetProbe retrieves data for a single probe, by ID
@@ -454,33 +438,16 @@ func GetProbe(
 ) {
 	var probe *Probe
 
-	probeurl := fmt.Sprintf("%sprobes/%d/", apiBaseURL, id)
+	query := fmt.Sprintf("%sprobes/%d/", apiBaseURL, id)
 
-	req, err := http.NewRequest("GET", probeurl, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
-
-	if verbose {
-		fmt.Printf("# API call: GET %s\n", req.URL)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiGetRequest(verbose, query, nil)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		// something went wrong; see if the error page can be parsed
-		var error ErrorResponse
-		err = json.NewDecoder(resp.Body).Decode(&error)
-		if err != nil {
-			return probe, err
-		}
-		return probe, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
+		return nil, parseAPIError(resp)
 	}
 
 	// grab and store the actual content

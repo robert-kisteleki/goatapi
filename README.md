@@ -35,8 +35,7 @@ be run by any user.
 	filter.FilterPublic(true)
 	count, err := filter.GetProbeCount(false)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		// handle the error
 	}
 	fmt.Println(count)
 ```
@@ -47,25 +46,26 @@ be run by any user.
 	filter := goatapi.NewProbeFilter()
 	filter.FilterCountry("NL")
 	filter.Sort("-id")
-	probes, err := filter.GetProbes(false)
+	probes := make(chan goatapi.AsyncProbeResult)
+	go filter.GetProbes(false, probes) // false means non-verbose
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		// handle the error
 	}
-	for _, probe := range probes {
-		fmt.Println(probe.ShortString())
+	for probe := range probes {
+		if probe.Error != nil {
+			// handle the error
+		} else {
+			// process the result
+		}
 	}
 ```
 
 ### Get a Particular Probe
 
 ```go
-	filter := goatapi.NewProbeFilter()
-	filter.FilterID(10001)
-	probe, err := filter.GetProbe(false)
+	probe, err := filter.GetProbe(false, 10001) // false means non-verbose
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		// handle the error
 	}
 	fmt.Println(probe.ShortString())
 ```
@@ -80,8 +80,7 @@ be run by any user.
 	filter.FilterCountry("NL")
 	count, err := filter.GetAnchorCount(false)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		// handle the error
 	}
 	fmt.Println(count)
 ```
@@ -91,25 +90,26 @@ be run by any user.
 ```go
 	filter := goatapi.NewAnchorFilter()
 	filter.FilterCountry("NL")
-	probes, err := filter.GetAnchors(false)
+	anchors := make(chan goatapi.AsyncAnchorResult)
+	go filter.GetAnchors(false, anchors) // false means non-verbose
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		// handle the error
 	}
-	for _, anchor := range anchors {
-		fmt.Println(anchor.ShortString())
+	for anchor := range anchors {
+		if anchor.Error != nil {
+			// handle the error
+		} else {
+			// process the result
+		}
 	}
 ```
 
 ### Get a Particular Anchor
 
 ```go
-	filter := goatapi.NewAnchorFilter()
-	filter.FilterID(1)
-	anchor, err := filter.GetAnchor(false)
+	anchor, err := filter.GetAnchor(false, 1080) // false means non-verbose
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		// handle the error
 	}
 	fmt.Println(anchor.ShortString())
 ```
@@ -125,8 +125,7 @@ be run by any user.
 	filter.FilterOneoff(true)
 	count, err := filter.GetMeasurementCount(false)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		// handle the error
 	}
 	fmt.Println(count)
 ```
@@ -139,25 +138,26 @@ be run by any user.
 	filter.FilterType("ping")
 	filter.FilterOneoff(true)
 	filter.Sort("-id")
-	msms, err := filter.GetMeasurements(false)
+	msms := make(chan goatapi.AsyncMeasurementResult)
+	go filter.GetMeasurements(false, msms) // false means non-verbose
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		// handle the error
 	}
-	for _, msm := range msms {
-		fmt.Println(msm.ShortString())
+	for msm := range msms {
+		if msm.Error != nil {
+			// handle the error
+		} else {
+			// process the result
+		}
 	}
 ```
 
 ### Get a Particular Measurement
 
 ```go
-	filter := goatapi.NewMeasurementFilter()
-	filter.FilterID(1001)
-	msm, err := filter.GetMeasurement(false)
+	msm, err := filter.GetMeasurement(false, 1001)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "ERROR: %v\n", err)
-		os.Exit(1)
+		// handle the error
 	}
 	fmt.Println(msm.ShortString())
 ```

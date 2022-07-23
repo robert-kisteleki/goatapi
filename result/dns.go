@@ -340,13 +340,13 @@ type dnsAnswer struct {
 }
 
 type dnsRecord struct {
-	DomainName   string `json:"mname"`
-	Name         string `json:"name"`
-	ResourceData string `json:"rdata"`
-	ResourceName string `json:"rname"`
-	Serial       uint   `json:"serial"`
-	Ttl          uint   `json:"ttl"`
-	Type         string `json:"type"`
+	DomainName   string   `json:"mname"`
+	Name         string   `json:"name"`
+	ResourceData []string `json:"rdata"`
+	ResourceName string   `json:"rname"`
+	Serial       uint     `json:"serial"`
+	Ttl          uint     `json:"ttl"`
+	Type         string   `json:"type"`
 }
 
 type dnsError struct {
@@ -426,13 +426,36 @@ func makeDnsResponse(
 		list := make([]DnsAnswer, 0)
 		for _, ans := range rrs {
 			ah := ans.Header()
+			rdata := ""
+			switch rtype := ans.(type) {
+			case *dns.A:
+				rdata = rtype.A.String()
+			case *dns.AAAA:
+				rdata = rtype.AAAA.String()
+			case *dns.CNAME:
+				rdata = rtype.Target
+			case *dns.DS:
+				rdata = rtype.String()
+			case *dns.NS:
+				rdata = rtype.Ns
+			case *dns.PTR:
+				rdata = rtype.Ptr
+			case *dns.RRSIG:
+				rdata = rtype.String()
+			case *dns.SOA:
+				rdata = rtype.String()
+			case *dns.SRV:
+				rdata = rtype.String()
+			case *dns.TXT:
+				rdata = strings.Join(rtype.Txt, ", ")
+			}
 			list = append(list,
 				DnsAnswer{
 					int(ah.Class),
 					int(ah.Rrtype),
 					ah.Name,
 					int(ah.Ttl),
-					strings.ReplaceAll(ans.String(), "\n", "\a"),
+					rdata,
 				},
 			)
 		}

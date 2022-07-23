@@ -7,7 +7,9 @@
 package goatapi
 
 import (
+	"encoding/json"
 	"fmt"
+	"net/http"
 	"strconv"
 	"strings"
 	"time"
@@ -26,8 +28,19 @@ type Tag struct {
 }
 
 // ErrorResponse type
-type ErrorResponse struct {
-	Detail ErrorDetail `json:"error"`
+type MultiErrorResponse struct {
+	ErrorDetail
+	Error  ErrorDetail    `json:"error"`
+	Errors []ErrorMessage `json:"errors"`
+}
+
+type ErrorMessage struct {
+	Source ErrorSource `json:"source"`
+	Detail string      `json:"detail"`
+}
+
+type ErrorSource struct {
+	Pointer string `json:"pointer"`
 }
 
 // ErrorDetails type
@@ -78,4 +91,31 @@ func (ut *uniTime) UnmarshalJSON(data []byte) error {
 // default output format for uniTime type is ISO8601
 func (ut uniTime) String() string {
 	return time.Time(ut).UTC().Format(time.RFC3339)
+}
+
+// something went wrong; see if the error page can be parsed
+// it could be a single error or a bunch of them
+func parseAPIError(resp *http.Response) error {
+	var err error
+
+	var decoded MultiErrorResponse
+	err = json.NewDecoder(resp.Body).Decode(&decoded)
+	if err != nil {
+		return err
+	}
+
+	if decoded.Status != 0 {
+		r := make([]string, 0)
+		r = append(r, decoded.Title)
+		for _, e := range decoded.Errors {
+			r = append(r, e.Detail)
+		}
+		return fmt.Errorf("%d %s", decoded.Status, strings.Join(r, ", "))
+	}
+
+	if decoded.Error.Status != 0 {
+		return fmt.Errorf("%d %s", decoded.Error.Status, decoded.Error.Title)
+	}
+
+	return fmt.Errorf("unknown error")
 }

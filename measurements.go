@@ -57,6 +57,11 @@ type ParticipantProbe struct {
 	ID uint `json:"id"`
 }
 
+type AsyncMeasurementResult struct {
+	Measurement Measurement
+	Error       error
+}
+
 // MeasurementListSortOrders lists all the allowed sort orders
 var MeasurementListSortOrders = []string{
 	"id", "-id",
@@ -498,28 +503,29 @@ func (filter *MeasurementFilter) GetMeasurementCount(
 	return page.Count, nil
 }
 
-// GetMeasurements returns an bunch of measurements by filtering
+// GetMeasurements returns a bunch of measurements by filtering
+// Results (or an error) appear on a channel
 func (filter *MeasurementFilter) GetMeasurements(
 	verbose bool,
-) (
-	measurements []Measurement,
-	err error,
+	measurements chan AsyncMeasurementResult,
 ) {
-	// sanity checks - late in the process, but not too late
-	err = filter.verifyFilters()
-	if err != nil {
-		return
-	}
+	defer close(measurements)
 
 	// special case: a specific ID was "filtered"
 	if filter.id != 0 {
-		measurement, errx := GetMeasurement(verbose, filter.id)
-		if errx != nil {
-			err = errx
+		msm, err := GetMeasurement(verbose, filter.id, filter.key)
+		if err != nil {
+			measurements <- AsyncMeasurementResult{Measurement{}, err}
 			return
 		}
-		measurements = make([]Measurement, 1)
-		measurements[0] = *measurement
+		measurements <- AsyncMeasurementResult{*msm, nil}
+		return
+	}
+
+	// sanity checks - late in the process, but not too late
+	err := filter.verifyFilters()
+	if err != nil {
+		measurements <- AsyncMeasurementResult{Measurement{}, err}
 		return
 	}
 
@@ -529,71 +535,47 @@ func (filter *MeasurementFilter) GetMeasurements(
 	}
 	query += "?" + filter.params.Encode()
 
-	req, err := http.NewRequest("GET", query, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
-	if filter.key != nil {
-		req.Header.Set("Authorization", "Key "+filter.key.String())
-	}
+	resp, err := apiGetRequest(verbose, query, filter.key)
 
-	// results are paginated with next= (and previoous=)
+	var total uint = 0
+	// results are paginated with next= (and previous=)
 	for {
-		if verbose {
-			msg := fmt.Sprintf("# API call: GET %s", req.URL)
-			if filter.key != nil {
-				msg += fmt.Sprintf(" (using API key %s...)", filter.key.String()[:8])
-			}
-			fmt.Println(msg)
-		}
-		client := &http.Client{}
-		resp, err := client.Do(req)
 		if err != nil {
-			return nil, err
+			measurements <- AsyncMeasurementResult{Measurement{}, err}
+			return
 		}
 		defer resp.Body.Close()
 
 		if resp.StatusCode != 200 {
-			// something went wrong; see if the error page can be parsed
-			var error ErrorResponse
-			err = json.NewDecoder(resp.Body).Decode(&error)
-			if err != nil {
-				return measurements, err
-			}
-			return measurements, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
+			measurements <- AsyncMeasurementResult{Measurement{}, parseAPIError(resp)}
+			return
 		}
 
 		// grab and store the actual content
 		var page measurementListingPage
 		err = json.NewDecoder(resp.Body).Decode(&page)
 		if err != nil {
-			return measurements, err
+			measurements <- AsyncMeasurementResult{Measurement{}, err}
+			return
 		}
 
-		// add elements to the list while observing the limit
-		if filter.limit != 0 && uint(len(measurements)+len(page.Measurements)) > filter.limit {
-			measurements = append(measurements, page.Measurements[:filter.limit-uint(len(measurements))]...)
-		} else {
-			measurements = append(measurements, page.Measurements...)
+		// return items while observing the limit
+		for _, msm := range page.Measurements {
+			measurements <- AsyncMeasurementResult{msm, nil}
+			total++
+			if total >= filter.limit {
+				return
+			}
 		}
 
-		// no next page or got to exactly the limit => we're done
-		if page.Next == "" || uint(len(measurements)) == filter.limit {
+		// no next page => we're done
+		if page.Next == "" {
 			break
 		}
 
-		// just follow th enext link
-		req, err = http.NewRequest("GET", page.Next, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", uaString)
+		// just follow the next link
+		resp, err = apiGetRequest(verbose, page.Next, filter.key)
 	}
-
-	return measurements, nil
 }
 
 // GetMeasurement retrieves data for a single measurement, by ID
@@ -603,39 +585,23 @@ func (filter *MeasurementFilter) GetMeasurements(
 func GetMeasurement(
 	verbose bool,
 	id uint,
+	key *uuid.UUID,
 ) (
 	*Measurement,
 	error,
 ) {
 	var measurement *Measurement
 
-	measurementurl := fmt.Sprintf("%smeasurements/%d/", apiBaseURL, id)
+	query := fmt.Sprintf("%smeasurements/%d/", apiBaseURL, id)
 
-	req, err := http.NewRequest("GET", measurementurl, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
-
-	if verbose {
-		fmt.Printf("# API call: GET %s\n", req.URL)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiGetRequest(verbose, query, key)
 	if err != nil {
 		return nil, err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		// something went wrong; see if the error page can be parsed
-		var error ErrorResponse
-		err = json.NewDecoder(resp.Body).Decode(&error)
-		if err != nil {
-			return measurement, err
-		}
-		return measurement, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
+		return nil, parseAPIError(resp)
 	}
 
 	// grab and store the actual content

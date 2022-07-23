@@ -9,7 +9,6 @@ package goatapi
 import (
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"net/netip"
 	"net/url"
 )
@@ -38,6 +37,11 @@ type Anchor struct {
 	TLSARecord      string      `json:"tlsa_record"`
 	LiveSince       *uniTime    `json:"date_live"`
 	HardwareVersion uint        `json:"hardware_version"`
+}
+
+type AsyncAnchorResult struct {
+	Anchor Anchor
+	Error  error
 }
 
 // Translate the anchor version (code) into something more understandable
@@ -176,19 +180,7 @@ func (filter *AnchorFilter) GetAnchorCount(
 	// counting needs application of the specified filters
 	query := apiBaseURL + "anchors/?" + filter.params.Encode()
 
-	req, err := http.NewRequest("GET", query, nil)
-	if err != nil {
-		return 0, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
-
-	if verbose {
-		fmt.Printf("# API call: GET %s\n", req.URL)
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiGetRequest(verbose, query, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -205,84 +197,73 @@ func (filter *AnchorFilter) GetAnchorCount(
 	return page.Count, nil
 }
 
-// GetAnchors returns an bunch of anchors by applying all the specified filters
+// GetAnchors returns a bunch of anchors by filtering
+// Results (or an error) appear on a channel
 func (filter *AnchorFilter) GetAnchors(
 	verbose bool,
-) (
-	anchors []Anchor,
-	err error,
+	anchors chan AsyncAnchorResult,
 ) {
+	defer close(anchors)
+
 	// special case: a specific ID was "filtered"
 	if filter.id != 0 {
-		anchor, errx := GetAnchor(verbose, filter.id)
-		if errx != nil {
-			err = errx
+		anchor, err := GetAnchor(verbose, filter.id)
+		if err != nil {
+			anchors <- AsyncAnchorResult{Anchor{}, err}
 			return
 		}
-		anchors = make([]Anchor, 0)
-		if anchor != nil {
-			anchors = append(anchors, *anchor)
-		}
+		anchors <- AsyncAnchorResult{*anchor, nil}
 		return
 	}
 
 	// sanity checks - late in the process, but not too late
-	err = filter.verifyFilters()
+	err := filter.verifyFilters()
 	if err != nil {
+		anchors <- AsyncAnchorResult{Anchor{}, err}
 		return
 	}
 
 	query := apiBaseURL + "anchors/?" + filter.params.Encode()
 
-	req, err := http.NewRequest("GET", query, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
+	resp, err := apiGetRequest(verbose, query, nil)
 
-	// results are paginated with next=
+	// results are paginated with next= (and previous=)
+	var total uint = 0
 	for {
-		if verbose {
-			fmt.Printf("# API call: GET %s\n", req.URL)
-		}
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
 		if err != nil {
-			return nil, err
+			anchors <- AsyncAnchorResult{Anchor{}, err}
 		}
 		defer resp.Body.Close()
+
+		if resp.StatusCode != 200 {
+			anchors <- AsyncAnchorResult{Anchor{}, err}
+			return
+		}
 
 		// grab and store the actual content
 		var page anchorListingPage
 		err = json.NewDecoder(resp.Body).Decode(&page)
 		if err != nil {
-			return anchors, err
+			anchors <- AsyncAnchorResult{Anchor{}, err}
 		}
 
-		// add elements to the list while observing the limit
-		if filter.limit != 0 && uint(len(anchors)+len(page.Anchors)) > filter.limit {
-			anchors = append(anchors, page.Anchors[:filter.limit-uint(len(anchors))]...)
-		} else {
-			anchors = append(anchors, page.Anchors...)
+		// return items while observing the limit
+		for _, anchor := range page.Anchors {
+			anchors <- AsyncAnchorResult{anchor, nil}
+			total++
+			if total >= filter.limit {
+				return
+			}
 		}
 
-		// no next page or got to exactly the limit => we're done
-		if page.Next == "" || uint(len(anchors)) == filter.limit {
+		// no next page => we're done
+		if page.Next == "" {
 			break
 		}
 
-		// just follow th enext link
-		req, err = http.NewRequest("GET", page.Next, nil)
-		if err != nil {
-			return nil, err
-		}
-		req.Header.Set("Accept", "application/json")
-		req.Header.Set("User-Agent", uaString)
+		// just follow the next link
+		resp, err = apiGetRequest(verbose, page.Next, nil)
 	}
-
-	return anchors, nil
 }
 
 // GetAnchor retrieves data for a single anchor, by ID
@@ -296,33 +277,16 @@ func GetAnchor(
 	anchor *Anchor,
 	err error,
 ) {
-	anchorurl := fmt.Sprintf("%sanchors/%d/", apiBaseURL, id)
+	query := fmt.Sprintf("%sanchors/%d/", apiBaseURL, id)
 
-	req, err := http.NewRequest("GET", anchorurl, nil)
-	if err != nil {
-		return anchor, err
-	}
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("User-Agent", uaString)
-
-	if verbose {
-		fmt.Printf("API call: GET %s\n", req.URL)
-	}
-	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := apiGetRequest(verbose, query, nil)
 	if err != nil {
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		// something went wrong; see if the error page can be parsed
-		var error ErrorResponse
-		err = json.NewDecoder(resp.Body).Decode(&error)
-		if err != nil {
-			return anchor, err
-		}
-		return anchor, fmt.Errorf("%d %s", error.Detail.Status, error.Detail.Title)
+		return nil, parseAPIError(resp)
 	}
 
 	// grab and store the actual content
