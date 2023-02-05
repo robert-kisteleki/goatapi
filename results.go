@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) 2022, 2023 Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -11,22 +11,29 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 	"time"
 
+	"github.com/gorilla/websocket"
 	"github.com/robert-kisteleki/goatapi/result"
 	"golang.org/x/exp/slices"
 )
 
 // ResultsFilter struct holds specified filters and other options
 type ResultsFilter struct {
-	params url.Values
-	id     uint
-	file   string
-	limit  uint
-	start  *time.Time
-	stop   *time.Time
-	probes []uint
-	latest bool
+	params   url.Values
+	id       uint   // which measurement
+	file     string // which file to read from
+	stream   bool   // use result streaming?
+	limit    uint
+	fetched  uint
+	start    *time.Time
+	stop     *time.Time
+	probes   []uint
+	latest   bool
+	typehint string
+	saveFile *os.File // save results to this file (if not nil)
+	saveAll  bool
 }
 
 // NewResultsFilter prepares a new result filter object
@@ -71,14 +78,29 @@ func (filter *ResultsFilter) FilterAnchors() {
 	filter.params.Add("anchors-only", "true")
 }
 
-// FilterAnchors filters for results reported by public probes
+// FilterPublicProbes filters for results reported by public probes
 func (filter *ResultsFilter) FilterPublicProbes() {
 	filter.params.Add("public-only", "true")
 }
 
-// FilterLatest "filters" fro downloading the latest results only
+// FilterLatest "filters" for downloading the latest results only
 func (filter *ResultsFilter) FilterLatest() {
 	filter.latest = true
+}
+
+// Save the results to this particular file
+func (filter *ResultsFilter) Save(file *os.File) {
+	filter.saveFile = file
+}
+
+// SaveAll determines if all results are saved, or only the matched ones
+func (filter *ResultsFilter) SaveAll(all bool) {
+	filter.saveAll = all
+}
+
+// Stream switches between using the streaming or the data API
+func (filter *ResultsFilter) Stream(useStream bool) {
+	filter.stream = useStream
 }
 
 // Limit limits the number of result retrieved
@@ -92,34 +114,31 @@ func (filter *ResultsFilter) verifyFilters() error {
 		return fmt.Errorf("ID or filename must be specified")
 	}
 
-	if filter.limit == 0 {
-		return fmt.Errorf("limit must be positive")
-	}
-
 	return nil
 }
 
-// GetResult returns results by filtering
+// GetResult returns results via various means by filtering
 // Results (or an error) appear on a channel
 func (filter *ResultsFilter) GetResults(
 	verbose bool,
 	results chan result.AsyncResult,
 ) {
-	if filter.id != 0 {
-		filter.GetNetworkResults(verbose, results)
-	} else {
-		if filter.file != "" {
-			filter.GetFileResults(verbose, results)
-		} else {
-			results <- result.AsyncResult{nil, fmt.Errorf("neither ID nor input file were specified")}
-			close(results)
-		}
+	switch {
+	case filter.file != "":
+		filter.getFileResults(verbose, results)
+	case filter.id != 0 && !filter.stream:
+		filter.downloadResults(verbose, results)
+	case filter.id != 0 && filter.stream:
+		filter.streamResults(verbose, results)
+	default:
+		results <- result.AsyncResult{Result: nil, Error: fmt.Errorf("neither ID nor input file were specified")}
+		close(results)
 	}
 }
 
-// GetNetworkResultsAsync returns results from the API
+// DownloadResults returns results from the data API
 // via a channel by applying the specified filters
-func (filter *ResultsFilter) GetNetworkResults(
+func (filter *ResultsFilter) downloadResults(
 	verbose bool,
 	results chan result.AsyncResult,
 ) {
@@ -128,16 +147,44 @@ func (filter *ResultsFilter) GetNetworkResults(
 	// prepare to read results
 	read, err := filter.openNetworkResults(verbose)
 	if err != nil {
-		results <- result.AsyncResult{nil, err}
+		results <- result.AsyncResult{Result: nil, Error: err}
 		return
 	}
 
-	filter.getResultsAsync(verbose, read, results)
+	filter.readResults(verbose, read, results)
 }
 
-// GetFileResultsAsync returns results from a file via a channel
+// StreamResults returns results from the streaming API
+// via a channel by applying the specified filters
+func (filter *ResultsFilter) streamResults(
+	verbose bool,
+	results chan result.AsyncResult,
+) {
+	// connect to the streaming API
+	conn, _, err := websocket.DefaultDialer.Dial(streamBaseURL, nil)
+	if err != nil {
+		results <- result.AsyncResult{Result: nil, Error: err}
+		close(results)
+	}
+
+	// handle the resuts coming form the websocket
+	go filter.streamReceiveHandler(verbose, conn, results)
+
+	// using types and marshaling may be overkill - but it's flexible
+	subscription := make([]any, 2)
+	subscription[0] = "atlas_subscribe"
+	type params struct {
+		StreamType  string `json:"streamType"`
+		Measurement uint   `json:"msm"`
+	}
+	subscription[1] = params{"result", filter.id}
+
+	conn.WriteJSON(subscription)
+}
+
+// getFileResults returns results from a file via a channel
 // If the file is "-" then it reads from stdin
-func (filter *ResultsFilter) GetFileResults(
+func (filter *ResultsFilter) getFileResults(
 	verbose bool,
 	results chan result.AsyncResult,
 ) {
@@ -153,7 +200,7 @@ func (filter *ResultsFilter) GetFileResults(
 		var err error
 		file, err = os.Open(filter.file)
 		if err != nil {
-			results <- result.AsyncResult{nil, err}
+			results <- result.AsyncResult{Result: nil, Error: err}
 			return
 		}
 		defer file.Close()
@@ -165,43 +212,110 @@ func (filter *ResultsFilter) GetFileResults(
 
 	read := bufio.NewScanner(bufio.NewReader(file))
 
-	filter.getResultsAsync(verbose, read, results)
+	filter.readResults(verbose, read, results)
 }
 
-func (filter *ResultsFilter) getResultsAsync(
+func (filter *ResultsFilter) readResults(
 	verbose bool,
 	read *bufio.Scanner,
 	results chan result.AsyncResult,
 ) {
-	var fetched uint = 0
-	typehint := ""
-	for read.Scan() && fetched < filter.limit {
+	for read.Scan() && (filter.limit == 0 || filter.fetched < filter.limit) {
 		line := read.Text()
-
-		res, err := result.ParseWithTypeHint(line, typehint)
-		if err != nil {
-			results <- result.AsyncResult{nil, err}
-			continue
-		}
-
-		// check if time interval and probe constraints match (applicable if we're
-		// reading from a file), and if so, put the result on the channel
-		ts := time.Time(res.GetTimeStamp())
-		if (filter.start == nil || filter.start.Before(ts.Add(time.Duration(1)))) &&
-			(filter.stop == nil || filter.stop.After(ts.Add(time.Duration(-1)))) &&
-			(len(filter.probes) == 0 || slices.Contains(filter.probes, res.GetProbeID())) {
-			results <- result.AsyncResult{&res, nil}
-			fetched++
-		}
-
-		// a type hint makes parsing much faster
-		if typehint == "" {
-			typehint = res.TypeName()
-		}
+		filter.processResult(line, verbose, results)
 	}
 }
 
-// prepare fecthing results, i.e. verify parameters, connect to the API, etc.
+func (filter *ResultsFilter) streamReceiveHandler(
+	verbose bool,
+	connection *websocket.Conn,
+	results chan result.AsyncResult,
+) {
+	defer connection.Close()
+	defer close(results)
+
+	for {
+		_, msg, err := connection.ReadMessage()
+		if err != nil {
+			err := fmt.Errorf("error reading from stream: %v", string(msg))
+			results <- result.AsyncResult{Result: nil, Error: err}
+			return
+		}
+
+		// instead of parsing the full message as JSON, we make a shortcut
+		const expectedSubscribePrefix = "[\"atlas_subscribed\","
+		const expectedResultPrefix = "[\"atlas_result\","
+
+		switch {
+		case expectedResultPrefix == string(msg[:len(expectedResultPrefix)]):
+			// cool, a result
+		case expectedSubscribePrefix == string(msg[:len(expectedSubscribePrefix)]):
+			// cool, subscribe has been confirmed
+			continue
+		default:
+			err := fmt.Errorf("unknown stream message received: %v", string(msg))
+			results <- result.AsyncResult{Result: nil, Error: err}
+			return
+		}
+
+		pduresult := strings.TrimPrefix(string(msg), expectedResultPrefix)
+		pduresult = strings.TrimSuffix(pduresult, "]")
+
+		filter.processResult(pduresult, verbose, results)
+
+		if filter.limit > 0 && filter.fetched >= filter.limit {
+			return
+		}
+
+	}
+}
+
+func (filter *ResultsFilter) processResult(
+	resultString string,
+	verbose bool,
+	results chan result.AsyncResult,
+) {
+	saveResult := func() {
+		if filter.saveFile != nil {
+			_, err := filter.saveFile.WriteString(resultString + "\n")
+			if err != nil {
+				results <- result.AsyncResult{Result: nil, Error: err}
+			}
+			// continue regardless of whether writing was successful
+		}
+	}
+
+	if filter.saveAll {
+		saveResult()
+	}
+
+	res, err := result.ParseWithTypeHint(resultString, filter.typehint)
+	if err != nil {
+		results <- result.AsyncResult{Result: nil, Error: err}
+		return
+	}
+
+	// check if time interval and probe constraints match (applicable if we're
+	// reading from a file), and if so, put the result on the channel
+	ts := time.Time(res.GetTimeStamp())
+	if (filter.start == nil || filter.start.Before(ts.Add(time.Duration(1)))) &&
+		(filter.stop == nil || filter.stop.After(ts.Add(time.Duration(-1)))) &&
+		(len(filter.probes) == 0 || slices.Contains(filter.probes, res.GetProbeID())) {
+		results <- result.AsyncResult{Result: &res, Error: nil}
+		filter.fetched++
+
+		if !filter.saveAll {
+			saveResult()
+		}
+	}
+
+	// a type hint makes parsing much faster
+	if filter.typehint == "" {
+		filter.typehint = res.TypeName()
+	}
+}
+
+// prepare fetching results, i.e. verify parameters, connect to the API, etc.
 func (filter *ResultsFilter) openNetworkResults(
 	verbose bool,
 ) (

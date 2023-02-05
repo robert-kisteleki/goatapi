@@ -1,5 +1,5 @@
 /*
-  (C) 2022 Robert Kisteleki & RIPE NCC
+  (C) 2022, 2023 Robert Kisteleki & RIPE NCC
 
   See LICENSE file for the license.
 */
@@ -18,6 +18,7 @@ const version = "v0.2.1"
 
 var uaString = "goatAPI " + version
 var apiBaseURL = "https://atlas.ripe.net/api/v2/"
+var streamBaseURL = "wss://atlas-stream.ripe.net/stream/"
 
 // UserAgent returns the user agent used by the package as a string
 func UserAgent() string {
@@ -35,6 +36,13 @@ func ModifyUserAgent(addition string) {
 func SetAPIBase(newAPIBaseURL string) {
 	// TODO: check sanity of new API base URL
 	apiBaseURL = newAPIBaseURL
+}
+
+// SetStreamBase allows the caller to modify the stream to talk to
+// This is really only useful to developers who have access to compatible APIs
+func SetStreamBase(newStreamBaseURL string) {
+	// TODO: check sanity of new API base URL
+	streamBaseURL = newStreamBaseURL
 }
 
 // Turn a slice of ints to a comma CSV string

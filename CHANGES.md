@@ -1,5 +1,12 @@
 # goatAPI changelog
 
+## next
+
+* NEW: add support to stream results from the result stream instead of the data API
+* NEW: add support to save all results obtained (from data API, stream API or even
+  from a file) to a file
+* CHANGED: change default limit on downloading results to 0 (no limit)
+
 ## v0.2.1
 
 * CHANGED: better error handling for non-200 responses
