@@ -9,6 +9,7 @@ It supports:
 * finding anchors
 * finding measurements
 * downloading results of measurements and turning them into Go objects
+* tuning in to result streaming and turning them into Go objects
 * loading a local file containing measurement results and turning them into Go objects
 * (more features to come)
 
@@ -166,11 +167,11 @@ be run by any user.
 
 All result types are defined as object types (PingResult, TracerouteResult, DnsResult, ...). The Go types try to be more useful than what the API natively provides, i.e. there's a translation from what the API gives to objects that have more meaning and simpler to understand fields and methods.
 
-Results can be fetched into an array, or via a channel (which is much preferred / recommended!). The filter support measurement ID, start/end time, probe IDs, "latest" results and combinations of these.
+Results can be fetched via a channel. The filter support measurement ID, start/end time, probe IDs, "latest" results and combinations of these.
 
 **Note: this is alpha level code. Some fields are probably mis-interpreted, old result versions are not processed correctly, a lot of corner cases are likely not handled properly and some objects should be passed as pointers instead. There's possibly a lot of work to be done here.**
 
-An example of retrieving and processing results from the API:
+An example of retrieving and processing results from the data API:
 
 ```go
 	filter := goatapi.NewResultsFilter()
@@ -178,7 +179,22 @@ An example of retrieving and processing results from the API:
 	filter.FilterLatest()
 
 	results := make(chan result.AsyncResult)
-	go filter.GetResultsAsync(false, results) // false means verbose mode is off
+	go filter.GetResults(false, results) // false means verbose mode is off
+
+	for result := range results {
+		// do something with a result
+	}
+```
+
+An example of retrieving and processing results from result streaming:
+
+```go
+	filter := goatapi.NewResultsFilter()
+	filter.FilterID(10001)
+	filter.Stream(true)
+
+	results := make(chan result.AsyncResult)
+	go filter.GetResults(false, results) // false means verbose mode is off
 
 	for result := range results {
 		// do something with a result
@@ -193,7 +209,7 @@ An example of retrieving and processing results from a file:
 	// note: other filters can be added (namely start, stop and probe)
 
 	results := make(chan result.AsyncResult)
-	go filter.GetResultsAsync(false, results) // false means verbose mode is off
+	go filter.GetResults(false, results) // false means verbose mode is off
 
 	for result := range results {
 		// do something with a result
@@ -210,12 +226,11 @@ The `result` package contains various types to hold corresponding measurement re
 
 * schedule a new measurement, stop existing measurements
 * modify participants of an existing measurement (add/remove probes)
-* listen to result stream of an already scheduled measurement
 * check credit balance, transfer credits, ...
 
 # Copyright, Contributing
 
-(C) 2022, [Robert Kisteleki](https://kistel.eu/) & [RIPE NCC](https://www.ripe.net)
+(C) 2022, 2023 [Robert Kisteleki](https://kistel.eu/) & [RIPE NCC](https://www.ripe.net)
 
 Contribution is possible and encouraged via the [Github repo](https://github.com/robert-kisteleki/goatapi/)
 
