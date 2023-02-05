@@ -1,6 +1,6 @@
 # goatAPI changelog
 
-## next
+## 0.3.0
 
 * NEW: add support to stream results from the result stream instead of the data API
 * NEW: add support to save all results obtained (from data API, stream API or even
