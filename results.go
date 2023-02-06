@@ -168,6 +168,7 @@ func (filter *ResultsFilter) streamResults(
 	if err != nil {
 		results <- result.AsyncResult{Result: nil, Error: err}
 		close(results)
+		return
 	}
 
 	// handle the resuts coming form the websocket
