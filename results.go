@@ -124,12 +124,15 @@ func (filter *ResultsFilter) GetResults(
 	results chan result.AsyncResult,
 ) {
 	switch {
-	case filter.file != "":
-		filter.getFileResults(verbose, results)
 	case filter.id != 0 && !filter.stream:
 		filter.downloadResults(verbose, results)
 	case filter.id != 0 && filter.stream:
 		filter.streamResults(verbose, results)
+	case filter.id == 0 && filter.stream:
+		results <- result.AsyncResult{Result: nil, Error: fmt.Errorf("no ID was speficied for stream")}
+		close(results)
+	case filter.file != "":
+		filter.getFileResults(verbose, results)
 	default:
 		results <- result.AsyncResult{Result: nil, Error: fmt.Errorf("neither ID nor input file were specified")}
 		close(results)
