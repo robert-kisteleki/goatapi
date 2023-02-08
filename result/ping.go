@@ -117,7 +117,7 @@ func (result *pingResult) Replies() []PingReply {
 			}
 			if ttl, ok := mapitem["ttl"]; ok {
 				pr.Ttl = uint(ttl.(float64))
-			} else {
+			} else if result.Ttl != nil {
 				pr.Ttl = *result.Ttl
 			}
 			_, pr.Duplicate = mapitem["dup"]
