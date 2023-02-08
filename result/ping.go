@@ -9,6 +9,7 @@ package result
 import (
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/netip"
 	"sort"
 )
@@ -102,11 +103,17 @@ type pingResult struct {
 // ignore problems, i.e. IP addresses that don't look like IP addresses
 func (result *pingResult) Replies() []PingReply {
 	r := make([]PingReply, 0)
+	min := 10e10
+	max := 0.0
+	sum := 0.0
 	for _, item := range result.RawResult {
 		mapitem := item.(map[string]any)
 		if rtt, ok := mapitem["rtt"]; ok {
 			// fill in other fields of a reply struct
 			pr := PingReply{Rtt: rtt.(float64)}
+			min = math.Min(min, pr.Rtt)
+			max = math.Max(max, pr.Rtt)
+			sum += pr.Rtt
 			if src, ok := mapitem["src_addr"]; ok {
 				src, err := netip.ParseAddr(src.(string))
 				if err == nil {
@@ -124,6 +131,14 @@ func (result *pingResult) Replies() []PingReply {
 
 			r = append(r, pr)
 		}
+	}
+
+	if len(r) != 0 && (result.Average == -1 || result.Minimum == -1 || result.Maximum == -1) {
+		// it may be that we have results but the supplied min/avg/max is not filled in
+		// fill them in
+		result.Minimum = min
+		result.Maximum = max
+		result.Average = sum / float64(len(r))
 	}
 	return r
 }

@@ -78,6 +78,50 @@ func TestProbeParser(t *testing.T) {
 	medexp := 10.0
 	assertEqual(t, med, medexp, fmt.Sprintf("median is incorrect, got %f, expected %f", med, medexp))
 
+	err = ping.Parse(`
+	{
+	"fw":5040,
+	"mver":"2.4.1",
+	"lts":20,
+	"dst_name":"example.com",
+	"ttr":1.234,
+	"af":4,
+	"dst_addr":"10.1.2.3",
+	"src_addr":"10.2.3.4",
+	"proto":"ICMP",
+	"ttl":54,
+	"size":64,
+	"result":[
+		{"rtt":10.000},
+		{"rtt":15.000},
+		{"rtt":20.000}
+	],
+	"dup":0,
+	"rcvd":3,
+	"sent":3,
+	"min":-1,
+	"max":-1,
+	"avg":-1,
+	"msm_id":1234567,
+	"prb_id":2345678,
+	"timestamp":1655443320,
+	"msm_name":"Ping",
+	"from":"192.168.1.1",
+	"type":"ping",
+	"group_id":34567890,
+	"step":10,
+	"stored_timestamp":1655443322
+	}
+	`)
+	if err != nil {
+		t.Fatalf("Error parsing ping result: %s", err)
+	}
+
+	assertEqual(t, ping.Minimum, 10.0, "error calculating ping field value for min")
+	assertEqual(t, ping.Average, 15.0, "error calculating ping field value for avg")
+	assertEqual(t, ping.Maximum, 20.0, "error calculating ping field value for max")
+	assertEqual(t, ping.Median, 15.0, "error calculating ping field value for median")
+
 	// verify errors
 	// verify timeouts
 }
