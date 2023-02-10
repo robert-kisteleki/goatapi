@@ -45,7 +45,7 @@ type ErrorSource struct {
 
 // ErrorDetails type
 type ErrorDetail struct {
-	Detail string `json:"details"`
+	Detail string `json:"detail"`
 	Status int    `json:"status"`
 	Title  string `json:"title"`
 	Code   int    `json:"code"`
