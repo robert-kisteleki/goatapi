@@ -1,5 +1,14 @@
 # goatAPI changelog
 
+## next
+
+* FIX: do not blow up if connection to stream fails
+* FIX: defaulted to file read if stream was turned on but no measurement ID was set
+* FIX: (ping parser) blew up if the generic Rtt field was missing
+* FIX: (ping parser) min/avg/max were not reported correctly if they were not present but could otherwise be calculated
+* FIX: typo in ErrorDetail JSON "detail"
+* NEW: support for measurement status checks
+
 ## 0.3.0
 
 * NEW: add support to stream results from the result stream instead of the data API
