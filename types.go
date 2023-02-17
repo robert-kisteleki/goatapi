@@ -68,6 +68,12 @@ func valueOrNA[T any](prefix string, quote bool, val *T) string {
 // a datetime type that can be unmarshaled from UNIX epoch *or* ISO times
 type uniTime time.Time
 
+// output is ISO8601(Z) down to seconds
+func (ut *uniTime) MarshalJSON() (b []byte, e error) {
+	layout := "2006-01-02T15:04:05Z"
+	return []byte("\"" + time.Time(*ut).UTC().Format(layout) + "\""), nil
+}
+
 func (ut *uniTime) UnmarshalJSON(data []byte) error {
 	// try parsing as UNIX epoch first
 	epoch, err := strconv.Atoi(string(data))
