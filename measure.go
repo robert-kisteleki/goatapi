@@ -40,7 +40,7 @@ type measurementTargetBase struct {
 	ResolveOnProbe bool      `json:"resolve_on_probe"`
 	Tags           *[]string `json:"tags,omitempty"`
 	Spread         *uint     `json:"spread,omitempty"`
-	SkipDNSCheck   bool      `json:"skip_dns_check,omitempty"`
+	SkipDNSCheck   *bool     `json:"skip_dns_check,omitempty"`
 }
 
 type measurementTargetPing struct {
@@ -175,14 +175,14 @@ func (spec *MeasurementSpec) AddProbesReuseWithTags(msm uint, n int, tagsincl *[
 }
 
 func (def *measurementTargetBase) addCommonFields(
-	description string,
 	typ string,
+	description string,
 	target string,
 	resolveOnProbe bool,
 	af uint,
 ) {
 	// common fields
-	def.Type = "ping"
+	def.Type = typ
 	def.Description = description
 	def.Target = target
 	def.ResolveOnProbe = resolveOnProbe
@@ -216,8 +216,9 @@ func (spec *MeasurementSpec) AddPing(
 
 	// options & specific fields
 	if options != nil {
-		def.SkipDNSCheck = options.SkipDNSCheck
-		// tags spread, skipdnscheck
+		if options.SkipDNSCheck {
+			def.SkipDNSCheck = &options.SkipDNSCheck
+		}
 		if options.Tags != nil {
 			def.Tags = &options.Tags
 		}
@@ -250,9 +251,9 @@ func (target *measurementTargetPing) MarshalJSON() (b []byte, e error) {
 }
 
 func (spec *MeasurementSpec) Submit(verbose bool) error {
-	//if len(spec.apiSpec.Definitons) == 0 {
-	//	return fmt.Errorf("need at least 1 measurement defintion")
-	//}
+	if len(spec.apiSpec.Definitons) == 0 {
+		return fmt.Errorf("need at least 1 measurement defintion")
+	}
 
 	if len(spec.apiSpec.Probes) == 0 {
 		return fmt.Errorf("need at least 1 probe specification")
