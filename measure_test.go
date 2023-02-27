@@ -92,58 +92,95 @@ func TestMeasureTargetGeneral(t *testing.T) {
 	var spec MeasurementSpec
 
 	spec = MeasurementSpec{}
-	err = spec.AddPing("description", "www.google.com", true, 3, nil)
+	err = spec.AddPing("description", "www.google.com", 3, nil, nil)
 	if err == nil {
 		t.Errorf("Invalid address family is accepted")
 	}
-	err = spec.AddPing("description", "www.google.com", true, 4, nil)
+	err = spec.AddPing("description", "www.google.com", 4, nil, nil)
 	if err != nil {
 		t.Errorf("Valid address family is not accepted: %v", err)
 	}
-	err = spec.AddPing("description", "www.google.com", true, 6, nil)
+	err = spec.AddPing("description", "www.google.com", 6, nil, nil)
 	if err != nil {
 		t.Errorf("Valid address family is not accepted: %v", err)
 	}
 
 	spec = MeasurementSpec{}
-	err = spec.AddPing("", "", true, 4, nil)
+	err = spec.AddPing("", "", 4, nil, nil)
 	if err == nil {
 		t.Errorf("Empty description or target is accepted")
 	}
+
+	spec = MeasurementSpec{}
+	err = spec.AddPing("description1", "www.google.com", 4, nil, nil)
+	if err != nil {
+		t.Errorf("Valid ping measurement target spec rejected: %v", err)
+	}
+}
+
+func TestMeasureTargetBase(t *testing.T) {
+	var err error
+	var spec MeasurementSpec
+
+	err = spec.AddPing("description1", "www.meta.com", 6, &BaseOptions{
+		ResolveOnProbe: true,
+		Interval:       999,
+		Tags:           []string{"tag1", "tag2"},
+		Spread:         50,
+		SkipDNSCheck:   true,
+	}, nil)
+	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("Ping measurement target spec with options failed to marshal to JSON: %v", err)
+	}
+	if string(b2) != `{"description":"description1","target":"www.meta.com","type":"ping","af":6,"interval":999,"resolve_on_probe":true,"tags":["tag1","tag2"],"spread":50,"skip_dns_check":true}` {
+		t.Errorf("Measurement with base options improperly serialized: %s", string(b2))
+	}
+
 }
 
 func TestMeasureTargetPing(t *testing.T) {
 	var err error
 	var spec MeasurementSpec
 
-	spec = MeasurementSpec{}
-	err = spec.AddPing("description1", "www.google.com", true, 4, nil)
-	if err != nil {
-		t.Errorf("Valid ping measurement target spec rejected: %v", err)
-	}
-	b1, err := spec.apiSpec.Definitons[0].MarshalJSON()
-	if err != nil {
-		t.Fatalf("Ping measurement target spec failed to marshal to JSON: %v", err)
-	}
-	if string(b1) != `{"description":"description1","target":"www.google.com","type":"ping","af":4,"resolve_on_probe":true,"packets":3,"packet_size":48}` {
-		t.Errorf("Measurement (ping) improperly serialized: %s", string(b1))
-	}
-
-	err = spec.AddPing("description2", "www.meta.com", false, 6, &PingOptions{
-		Tags:           []string{"tag1", "tag2"},
-		Spread:         50,
-		SkipDNSCheck:   true,
+	err = spec.AddPing("description2", "www.meta.com", 6, nil, &PingOptions{
 		Packets:        5,
-		PacketSize:     99,
-		Interval:       999,
+		PacketSize:     9,
+		PacketInterval: 99,
 		IncludeProbeID: true,
 	})
-	b2, err := spec.apiSpec.Definitons[1].MarshalJSON()
+	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
 	if err != nil {
 		t.Fatalf("Ping measurement target spec with options failed to marshal to JSON: %v", err)
 	}
-	if string(b2) != `{"description":"description2","target":"www.meta.com","type":"ping","af":6,"resolve_on_probe":false,"tags":["tag1","tag2"],"spread":50,"skip_dns_check":true,"packets":5,"packet_size":99,"interval":999,"include_probe_id":true}` {
-		t.Errorf("Measurement (ping) improperly serialized: %s", string(b2))
+	if string(b2) != `{"description":"description2","target":"www.meta.com","type":"ping","af":6,"packets":5,"packet_size":9,"packet_interval":99,"include_probe_id":true}` {
+		t.Errorf("Measurement (ping) with options improperly serialized: %s", string(b2))
+	}
+
+}
+
+func TestMeasureTargetTrace(t *testing.T) {
+	var err error
+	var spec MeasurementSpec
+
+	err = spec.AddTrace("description2", "www.meta.com", 6, nil, &TraceOptions{
+		Protocol:        "ICMP",
+		ResponseTimeout: 19,
+		Packets:         5,
+		PacketSize:      9,
+		ParisId:         8,
+		FirstHop:        2,
+		LastHop:         3,
+		DestinationEH:   4,
+		HopByHopEH:      7,
+		DontFragment:    true,
+	})
+	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("Trace measurement target spec with options failed to marshal to JSON: %v", err)
+	}
+	if string(b2) != `{"description":"description2","target":"www.meta.com","type":"traceroute","af":6,"protocol":"ICMP","response_timeout":19,"packets":5,"packet_size":9,"paris":8,"first_hop":2,"max_hops":3,"destination_option_size":4,"hop_by_hop_option_size":7,"dont_fragment":true}` {
+		t.Errorf("Measurement (trace) with options improperly serialized: %s", string(b2))
 	}
 
 }
@@ -167,7 +204,7 @@ func TestMeasureSpec(t *testing.T) {
 	}
 
 	spec = MeasurementSpec{}
-	spec.AddPing("ping", "google.com", false, 4, nil)
+	spec.AddPing("ping", "google.com", 4, nil, nil)
 	err = spec.Submit(false)
 	if err == nil {
 		t.Errorf("Measurement spec without probes is accepted")
