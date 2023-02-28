@@ -86,6 +86,12 @@ type measurementTargetDns struct {
 	Timeout        *uint   `json:"timeout,omitempty"`
 }
 
+type measurementTargetTls struct {
+	measurementTargetBase
+	Port uint    `json:"port"`
+	Sni  *string `json:"hostname,omitempty"`
+}
+
 // various measurement options
 type BaseOptions struct {
 	ResolveOnProbe bool
@@ -129,6 +135,10 @@ type DnsOptions struct {
 	SetDo          bool // API default: false
 	SetCd          bool // API default: false
 	Timeout        uint // API default: 5000
+}
+type TlsOptions struct {
+	Port uint // API default: 443
+	Sni  string
 }
 
 type measurementProbeDefinition struct {
@@ -461,6 +471,37 @@ func (spec *MeasurementSpec) AddDns(
 	return nil
 }
 
+func (spec *MeasurementSpec) AddTls(
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+	tlsoptions *TlsOptions,
+) error {
+	var def = new(measurementTargetTls)
+
+	if err := def.addCommonFields("sslcert", description, target, af, baseoptions); err != nil {
+		return err
+	}
+
+	// explicit defaults
+	def.Port = 443
+
+	// TLS specific fields
+	if tlsoptions != nil {
+		if tlsoptions.Port != 0 {
+			def.Port = tlsoptions.Port
+		}
+		if tlsoptions.Sni != "" {
+			def.Sni = &tlsoptions.Sni
+		}
+	}
+
+	spec.apiSpec.Definitons = append(spec.apiSpec.Definitons, def)
+
+	return nil
+}
+
 func (target *measurementTargetPing) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
@@ -468,6 +509,9 @@ func (target *measurementTargetTrace) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
 func (target *measurementTargetDns) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*target)
+}
+func (target *measurementTargetTls) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
 

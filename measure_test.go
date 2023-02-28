@@ -213,6 +213,23 @@ func TestMeasureTargetDns(t *testing.T) {
 	}
 }
 
+func TestMeasureTargetTls(t *testing.T) {
+	var err error
+	var spec MeasurementSpec
+
+	err = spec.AddTls("description2", "www.meta.com", 6, nil, &TlsOptions{
+		Port: 333,
+		Sni:  "www.meta.com",
+	})
+	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("Tls measurement target spec with options failed to marshal to JSON: %v", err)
+	}
+	if string(b2) != `{"description":"description2","target":"www.meta.com","type":"sslcert","af":6,"port":333,"hostname":"www.meta.com"}` {
+		t.Errorf("Measurement (TLS) with options improperly serialized: %s", string(b2))
+	}
+}
+
 // Test if the measurement spec generator works
 func TestMeasureSpec(t *testing.T) {
 	var err error
