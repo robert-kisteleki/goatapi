@@ -92,6 +92,12 @@ type measurementTargetTls struct {
 	Sni  *string `json:"hostname,omitempty"`
 }
 
+type measurementTargetNtp struct {
+	measurementTargetBase
+	Packets *uint `json:"packets,omitempty"`
+	Timeout *uint `json:"timeout,omitempty"`
+}
+
 // various measurement options
 type BaseOptions struct {
 	ResolveOnProbe bool
@@ -108,7 +114,7 @@ type PingOptions struct {
 }
 type TraceOptions struct {
 	Protocol        string // default: UDP
-	ResponseTimeout uint   // API default: 4000
+	ResponseTimeout uint   // API default: 4000 (ms)
 	Packets         uint   // API default: 3
 	PacketSize      uint   // API default: 48 bytes
 	ParisId         uint   // API default: 16, default: 0
@@ -134,11 +140,15 @@ type DnsOptions struct {
 	SetRd          bool // API default: false
 	SetDo          bool // API default: false
 	SetCd          bool // API default: false
-	Timeout        uint // API default: 5000
+	Timeout        uint // API default: 5000 (ms)
 }
 type TlsOptions struct {
 	Port uint // API default: 443
 	Sni  string
+}
+type NtpOptions struct {
+	Packets uint // API default: 3
+	Timeout uint // API default: 4000 (ms)
 }
 
 type measurementProbeDefinition struct {
@@ -502,6 +512,36 @@ func (spec *MeasurementSpec) AddTls(
 	return nil
 }
 
+func (spec *MeasurementSpec) AddNtp(
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+	ntpoptions *NtpOptions,
+) error {
+	var def = new(measurementTargetNtp)
+
+	if err := def.addCommonFields("ntp", description, target, af, baseoptions); err != nil {
+		return err
+	}
+
+	// explicit defaults
+
+	// NTP specific fields
+	if ntpoptions != nil {
+		if ntpoptions.Packets != 0 {
+			def.Packets = &ntpoptions.Packets
+		}
+		if ntpoptions.Timeout != 0 {
+			def.Timeout = &ntpoptions.Timeout
+		}
+	}
+
+	spec.apiSpec.Definitons = append(spec.apiSpec.Definitons, def)
+
+	return nil
+}
+
 func (target *measurementTargetPing) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
@@ -512,6 +552,9 @@ func (target *measurementTargetDns) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
 func (target *measurementTargetTls) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*target)
+}
+func (target *measurementTargetNtp) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
 

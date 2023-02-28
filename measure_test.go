@@ -230,6 +230,23 @@ func TestMeasureTargetTls(t *testing.T) {
 	}
 }
 
+func TestMeasureTargetNtp(t *testing.T) {
+	var err error
+	var spec MeasurementSpec
+
+	err = spec.AddNtp("description2", "www.meta.com", 6, nil, &NtpOptions{
+		Packets: 5,
+		Timeout: 99,
+	})
+	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("NTP measurement target spec with options failed to marshal to JSON: %v", err)
+	}
+	if string(b2) != `{"description":"description2","target":"www.meta.com","type":"ntp","af":6,"packets":5,"timeout":99}` {
+		t.Errorf("Measurement (NTP) with options improperly serialized: %s", string(b2))
+	}
+}
+
 // Test if the measurement spec generator works
 func TestMeasureSpec(t *testing.T) {
 	var err error
