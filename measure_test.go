@@ -156,7 +156,6 @@ func TestMeasureTargetPing(t *testing.T) {
 	if string(b2) != `{"description":"description2","target":"www.meta.com","type":"ping","af":6,"packets":5,"packet_size":9,"packet_interval":99,"include_probe_id":true}` {
 		t.Errorf("Measurement (ping) with options improperly serialized: %s", string(b2))
 	}
-
 }
 
 func TestMeasureTargetTrace(t *testing.T) {
@@ -182,7 +181,36 @@ func TestMeasureTargetTrace(t *testing.T) {
 	if string(b2) != `{"description":"description2","target":"www.meta.com","type":"traceroute","af":6,"protocol":"ICMP","response_timeout":19,"packets":5,"packet_size":9,"paris":8,"first_hop":2,"max_hops":3,"destination_option_size":4,"hop_by_hop_option_size":7,"dont_fragment":true}` {
 		t.Errorf("Measurement (trace) with options improperly serialized: %s", string(b2))
 	}
+}
 
+func TestMeasureTargetDns(t *testing.T) {
+	var err error
+	var spec MeasurementSpec
+
+	err = spec.AddDns("description2", "ns.ripe.net", 6, nil, &DnsOptions{
+		Protocol:       "TCP",
+		Class:          "CHAOS",
+		Type:           "AAAA",
+		Argument:       "ping.ripe.net",
+		UseMacros:      true,
+		UseResolver:    true,
+		UdpPayloadSize: 1024,
+		Retries:        3,
+		IncludeQbuf:    true,
+		IncludeAbuf:    true,
+		PrependProbeID: true,
+		SetRd:          true,
+		SetDo:          true,
+		SetCd:          true,
+		Timeout:        999,
+	})
+	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("DNS measurement target spec with options failed to marshal to JSON: %v", err)
+	}
+	if string(b2) != `{"description":"description2","target":"ns.ripe.net","type":"dns","af":6,"protocol":"TCP","query_class":"CHAOS","query_type":"AAAA","query_argument":"ping.ripe.net","use_macros":true,"use_probe_resolver":true,"udp_payload_size":1024,"retry":3,"include_qbuf":true,"include_abuf":true,"prepend_probe_id":true,"set_rd_bit":true,"set_do_bit":true,"set_cd_bit":true,"timeout":999}` {
+		t.Errorf("Measurement (DNS) with options improperly serialized: %s", string(b2))
+	}
 }
 
 // Test if the measurement spec generator works

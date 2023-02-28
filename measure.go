@@ -66,6 +66,26 @@ type measurementTargetTrace struct {
 	DontFragment    *bool  `json:"dont_fragment,omitempty"`
 }
 
+type measurementTargetDns struct {
+	measurementTargetBase
+	Protocol       string  `json:"protocol"`
+	Class          string  `json:"query_class"`
+	Type           string  `json:"query_type"`
+	Argument       *string `json:"query_argument,omitempty"`
+	UseMacros      *bool   `json:"use_macros,omitempty"`
+	UseResolver    *bool   `json:"use_probe_resolver,omitempty"`
+	Nsid           *bool   `json:"set_nsid_bit,omitempty"`
+	UdpPayloadSize *uint   `json:"udp_payload_size,omitempty"`
+	Retries        *uint   `json:"retry,omitempty"`
+	IncludeQbuf    *bool   `json:"include_qbuf,omitempty"`
+	IncludeAbuf    *bool   `json:"include_abuf,omitempty"`
+	PrependProbeID *bool   `json:"prepend_probe_id,omitempty"`
+	SetRd          *bool   `json:"set_rd_bit,omitempty"`
+	SetDo          *bool   `json:"set_do_bit,omitempty"`
+	SetCd          *bool   `json:"set_cd_bit,omitempty"`
+	Timeout        *uint   `json:"timeout,omitempty"`
+}
+
 // various measurement options
 type BaseOptions struct {
 	ResolveOnProbe bool
@@ -92,6 +112,24 @@ type TraceOptions struct {
 	HopByHopEH      uint   // API default: 0
 	DontFragment    bool   // API default: false
 }
+type DnsOptions struct {
+	Protocol       string // default: UDP
+	Class          string
+	Type           string
+	Argument       string
+	UseMacros      bool // API default: false
+	UseResolver    bool // API default: false
+	Nsid           bool // API default: false
+	UdpPayloadSize uint // API default: 512
+	Retries        uint // API default: 0
+	IncludeQbuf    bool // API default: false
+	IncludeAbuf    bool // API default: false
+	PrependProbeID bool // API default: false
+	SetRd          bool // API default: false
+	SetDo          bool // API default: false
+	SetCd          bool // API default: false
+	Timeout        uint // API default: 5000
+}
 
 type measurementProbeDefinition struct {
 	Type      string                          `json:"type"`
@@ -106,7 +144,10 @@ type measurementProbeDefinitionTags struct {
 }
 
 var areas = []string{"WW", "West", "North-Central", "South-Central", "North-East", "South-East"}
-var protocols = []string{"ICMP", "UDP", "TCP"}
+var traceprotocols = []string{"ICMP", "UDP", "TCP"}
+var dnsprotocols = []string{"UDP", "TCP"}
+var dnsclasses = []string{"IN", "CHAOS"}
+var dnstypes = []string{"A", "AAAA", "ANY", "CNAME", "DNSKEY", "DS", "MX", "NS", "NSEC", "PTR", "RRSIG", "SOA", "TXT", "SRV", "NAPTR", "TLSA"}
 
 func NewMeasurementSpec() (spec *MeasurementSpec) {
 	spec = new(MeasurementSpec)
@@ -305,7 +346,7 @@ func (spec *MeasurementSpec) AddTrace(
 	// trace specific fields
 	if traceoptions != nil {
 		if traceoptions.Protocol != "" &&
-			slices.Contains(protocols, traceoptions.Protocol) {
+			slices.Contains(traceprotocols, traceoptions.Protocol) {
 			def.Protocol = traceoptions.Protocol
 		}
 		if traceoptions.ResponseTimeout != 0 {
@@ -342,10 +383,91 @@ func (spec *MeasurementSpec) AddTrace(
 	return nil
 }
 
+func (spec *MeasurementSpec) AddDns(
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+	dnsoptions *DnsOptions,
+) error {
+	var def = new(measurementTargetDns)
+
+	if err := def.addCommonFields("dns", description, target, af, baseoptions); err != nil {
+		return err
+	}
+
+	// explicit defaults
+	def.Protocol = "UDP"
+	def.Class = "IN"
+	def.Type = "A"
+
+	// dns specific fields
+	if dnsoptions != nil {
+		if dnsoptions.Protocol != "" &&
+			slices.Contains(dnsprotocols, dnsoptions.Protocol) {
+			def.Protocol = dnsoptions.Protocol
+		}
+		if dnsoptions.Class != "" &&
+			slices.Contains(dnsclasses, dnsoptions.Class) {
+			def.Class = dnsoptions.Class
+		}
+		if dnsoptions.Type != "" &&
+			slices.Contains(dnstypes, dnsoptions.Type) {
+			def.Type = dnsoptions.Type
+		}
+		if dnsoptions.Argument != "" {
+			def.Argument = &dnsoptions.Argument
+		}
+		if dnsoptions.UseMacros {
+			def.UseMacros = &dnsoptions.UseMacros
+		}
+		if dnsoptions.UseResolver {
+			def.UseResolver = &dnsoptions.UseResolver
+		}
+		if dnsoptions.Nsid {
+			def.Nsid = &dnsoptions.Nsid
+		}
+		if dnsoptions.UdpPayloadSize != 0 {
+			def.UdpPayloadSize = &dnsoptions.UdpPayloadSize
+		}
+		if dnsoptions.Retries != 0 {
+			def.Retries = &dnsoptions.Retries
+		}
+		if dnsoptions.IncludeQbuf {
+			def.IncludeQbuf = &dnsoptions.IncludeQbuf
+		}
+		if dnsoptions.IncludeAbuf {
+			def.IncludeAbuf = &dnsoptions.IncludeAbuf
+		}
+		if dnsoptions.PrependProbeID {
+			def.PrependProbeID = &dnsoptions.PrependProbeID
+		}
+		if dnsoptions.SetRd {
+			def.SetRd = &dnsoptions.SetRd
+		}
+		if dnsoptions.SetDo {
+			def.SetDo = &dnsoptions.SetDo
+		}
+		if dnsoptions.SetRd {
+			def.SetCd = &dnsoptions.SetCd
+		}
+		if dnsoptions.Timeout != 0 {
+			def.Timeout = &dnsoptions.Timeout
+		}
+	}
+
+	spec.apiSpec.Definitons = append(spec.apiSpec.Definitons, def)
+
+	return nil
+}
+
 func (target *measurementTargetPing) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
 func (target *measurementTargetTrace) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*target)
+}
+func (target *measurementTargetDns) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
 
