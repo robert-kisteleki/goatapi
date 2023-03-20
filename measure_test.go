@@ -247,6 +247,29 @@ func TestMeasureTargetNtp(t *testing.T) {
 	}
 }
 
+func TestMeasureTargetHttp(t *testing.T) {
+	var err error
+	var spec MeasurementSpec
+
+	err = spec.AddHttp("description2", "www.meta.com", 6, nil, &HttpOptions{
+		Method:             "GET",
+		Path:               "/favicon.ico",
+		Query:              "a=b&c=d",
+		Port:               8080,
+		HeaderBytes:        1024,
+		Version:            "1.1",
+		ExtendedTiming:     true,
+		MoreExtendedTiming: true,
+	})
+	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
+	if err != nil {
+		t.Fatalf("HTTP measurement target spec with options failed to marshal to JSON: %v", err)
+	}
+	if string(b2) != `{"description":"description2","target":"www.meta.com","type":"http","af":6,"method":"GET","path":"/favicon.ico","query_string":"a=b&c=d","port":8080,"header_bytes":1024,"version":"1.1","extended_timing":true,"more_extended_timing":true}` {
+		t.Errorf("Measurement (HTTP) with options improperly serialized: %s", string(b2))
+	}
+}
+
 // Test if the measurement spec generator works
 func TestMeasureSpec(t *testing.T) {
 	var err error

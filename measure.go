@@ -98,6 +98,18 @@ type measurementTargetNtp struct {
 	Timeout *uint `json:"timeout,omitempty"`
 }
 
+type measurementTargetHttp struct {
+	measurementTargetBase
+	Method             string  `json:"method"`
+	Path               string  `json:"path"`
+	Query              *string `json:"query_string,omitempty"`
+	Port               *uint   `json:"port,omitempty"`
+	HeaderBytes        *uint   `json:"header_bytes,omitempty"`
+	Version            *string `json:"version,omitempty"`
+	ExtendedTiming     *bool   `json:"extended_timing,omitempty"`
+	MoreExtendedTiming *bool   `json:"more_extended_timing,omitempty"`
+}
+
 // various measurement options
 type BaseOptions struct {
 	ResolveOnProbe bool
@@ -150,6 +162,16 @@ type NtpOptions struct {
 	Packets uint // API default: 3
 	Timeout uint // API default: 4000 (ms)
 }
+type HttpOptions struct {
+	Method             string
+	Path               string
+	Query              string
+	Port               uint
+	HeaderBytes        uint
+	Version            string
+	ExtendedTiming     bool
+	MoreExtendedTiming bool
+}
 
 type measurementProbeDefinition struct {
 	Type      string                          `json:"type"`
@@ -168,6 +190,8 @@ var traceprotocols = []string{"ICMP", "UDP", "TCP"}
 var dnsprotocols = []string{"UDP", "TCP"}
 var dnsclasses = []string{"IN", "CHAOS"}
 var dnstypes = []string{"A", "AAAA", "ANY", "CNAME", "DNSKEY", "DS", "MX", "NS", "NSEC", "PTR", "RRSIG", "SOA", "TXT", "SRV", "NAPTR", "TLSA"}
+var httpmethods = []string{"GET", "HEAD", "POST"}
+var httpversions = []string{"1.0", "1.1"}
 
 func NewMeasurementSpec() (spec *MeasurementSpec) {
 	spec = new(MeasurementSpec)
@@ -542,6 +566,57 @@ func (spec *MeasurementSpec) AddNtp(
 	return nil
 }
 
+func (spec *MeasurementSpec) AddHttp(
+	description string,
+	target string,
+	af uint,
+	baseoptions *BaseOptions,
+	httpoptions *HttpOptions,
+) error {
+	var def = new(measurementTargetHttp)
+
+	if err := def.addCommonFields("http", description, target, af, baseoptions); err != nil {
+		return err
+	}
+
+	// explicit defaults
+	def.Method = "HEAD"
+
+	// HTTP specific fields
+	if httpoptions != nil {
+		if httpoptions.Method != "" &&
+			slices.Contains(httpmethods, httpoptions.Method) {
+			def.Method = httpoptions.Method
+		}
+		if httpoptions.Version != "" &&
+			slices.Contains(httpversions, httpoptions.Version) {
+			def.Version = &httpoptions.Version
+		}
+		if httpoptions.Path != "" {
+			def.Path = httpoptions.Path
+		}
+		if httpoptions.Query != "" {
+			def.Query = &httpoptions.Query
+		}
+		if httpoptions.Port != 0 {
+			def.Port = &httpoptions.Port
+		}
+		if httpoptions.HeaderBytes != 0 {
+			def.HeaderBytes = &httpoptions.HeaderBytes
+		}
+		if httpoptions.ExtendedTiming {
+			def.ExtendedTiming = &httpoptions.ExtendedTiming
+		}
+		if httpoptions.MoreExtendedTiming {
+			def.MoreExtendedTiming = &httpoptions.MoreExtendedTiming
+		}
+	}
+
+	spec.apiSpec.Definitons = append(spec.apiSpec.Definitons, def)
+
+	return nil
+}
+
 func (target *measurementTargetPing) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
@@ -555,6 +630,9 @@ func (target *measurementTargetTls) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
 func (target *measurementTargetNtp) MarshalJSON() (b []byte, e error) {
+	return json.Marshal(*target)
+}
+func (target *measurementTargetHttp) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
 
