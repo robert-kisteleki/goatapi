@@ -109,9 +109,10 @@ type anchorListingPage struct {
 
 // AnchorFilter struct holds specified filters and other options
 type AnchorFilter struct {
-	params url.Values
-	id     uint
-	limit  uint
+	params  url.Values
+	id      uint
+	limit   uint
+	verbose bool
 }
 
 // NewAnchorFilter prepares a new anchor filter object
@@ -119,6 +120,11 @@ func NewAnchorFilter() AnchorFilter {
 	filter := AnchorFilter{}
 	filter.params = url.Values{}
 	return filter
+}
+
+// Verboe sets verbosity
+func (filter *AnchorFilter) Verbose(verbose bool) {
+	filter.verbose = verbose
 }
 
 // FilterID filters by a particular anchor ID
@@ -165,9 +171,7 @@ func (filter *AnchorFilter) verifyFilters() error {
 }
 
 // GetAnchorCount returns the count of anchors by filtering
-func (filter *AnchorFilter) GetAnchorCount(
-	verbose bool,
-) (
+func (filter *AnchorFilter) GetAnchorCount() (
 	count uint,
 	err error,
 ) {
@@ -180,7 +184,7 @@ func (filter *AnchorFilter) GetAnchorCount(
 	// counting needs application of the specified filters
 	query := apiBaseURL + "anchors/?" + filter.params.Encode()
 
-	resp, err := apiGetRequest(verbose, query, nil)
+	resp, err := apiGetRequest(filter.verbose, query, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -200,14 +204,13 @@ func (filter *AnchorFilter) GetAnchorCount(
 // GetAnchors returns a bunch of anchors by filtering
 // Results (or an error) appear on a channel
 func (filter *AnchorFilter) GetAnchors(
-	verbose bool,
 	anchors chan AsyncAnchorResult,
 ) {
 	defer close(anchors)
 
 	// special case: a specific ID was "filtered"
 	if filter.id != 0 {
-		anchor, err := GetAnchor(verbose, filter.id)
+		anchor, err := GetAnchor(filter.verbose, filter.id)
 		if err != nil {
 			anchors <- AsyncAnchorResult{Anchor{}, err}
 			return
@@ -225,7 +228,7 @@ func (filter *AnchorFilter) GetAnchors(
 
 	query := apiBaseURL + "anchors/?" + filter.params.Encode()
 
-	resp, err := apiGetRequest(verbose, query, nil)
+	resp, err := apiGetRequest(filter.verbose, query, nil)
 
 	// results are paginated with next= (and previous=)
 	var total uint = 0
@@ -262,7 +265,7 @@ func (filter *AnchorFilter) GetAnchors(
 		}
 
 		// just follow the next link
-		resp, err = apiGetRequest(verbose, page.Next, nil)
+		resp, err = apiGetRequest(filter.verbose, page.Next, nil)
 	}
 }
 

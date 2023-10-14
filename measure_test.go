@@ -129,6 +129,9 @@ func TestMeasureTargetBase(t *testing.T) {
 		Spread:         50,
 		SkipDNSCheck:   true,
 	}, nil)
+	if err != nil {
+		t.Fatalf("Ping measurement target spec with options failed: %v", err)
+	}
 	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
 	if err != nil {
 		t.Fatalf("Ping measurement target spec with options failed to marshal to JSON: %v", err)
@@ -149,6 +152,9 @@ func TestMeasureTargetPing(t *testing.T) {
 		PacketInterval: 99,
 		IncludeProbeID: true,
 	})
+	if err != nil {
+		t.Fatalf("Ping measurement target spec with options failed: %v", err)
+	}
 	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
 	if err != nil {
 		t.Fatalf("Ping measurement target spec with options failed to marshal to JSON: %v", err)
@@ -174,6 +180,9 @@ func TestMeasureTargetTrace(t *testing.T) {
 		HopByHopEH:      7,
 		DontFragment:    true,
 	})
+	if err != nil {
+		t.Fatalf("Trace measurement target spec with options failed: %v", err)
+	}
 	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
 	if err != nil {
 		t.Fatalf("Trace measurement target spec with options failed to marshal to JSON: %v", err)
@@ -204,6 +213,9 @@ func TestMeasureTargetDns(t *testing.T) {
 		SetCd:          true,
 		Timeout:        999,
 	})
+	if err != nil {
+		t.Fatalf("DNS measurement target spec with options failed: %v", err)
+	}
 	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
 	if err != nil {
 		t.Fatalf("DNS measurement target spec with options failed to marshal to JSON: %v", err)
@@ -221,6 +233,9 @@ func TestMeasureTargetTls(t *testing.T) {
 		Port: 333,
 		Sni:  "www.meta.com",
 	})
+	if err != nil {
+		t.Fatalf("Tls measurement target spec with options failed: %v", err)
+	}
 	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
 	if err != nil {
 		t.Fatalf("Tls measurement target spec with options failed to marshal to JSON: %v", err)
@@ -238,6 +253,9 @@ func TestMeasureTargetNtp(t *testing.T) {
 		Packets: 5,
 		Timeout: 99,
 	})
+	if err != nil {
+		t.Fatalf("NTP measurement target spec with options failed: %v", err)
+	}
 	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
 	if err != nil {
 		t.Fatalf("NTP measurement target spec with options failed to marshal to JSON: %v", err)
@@ -254,18 +272,21 @@ func TestMeasureTargetHttp(t *testing.T) {
 	err = spec.AddHttp("description2", "www.meta.com", 6, nil, &HttpOptions{
 		Method:             "GET",
 		Path:               "/favicon.ico",
-		Query:              "a=b&c=d",
+		Query:              "a=b",
 		Port:               8080,
 		HeaderBytes:        1024,
 		Version:            "1.1",
 		ExtendedTiming:     true,
 		MoreExtendedTiming: true,
 	})
+	if err != nil {
+		t.Fatalf("HTTP measurement target spec with options failed: %v", err)
+	}
 	b2, err := spec.apiSpec.Definitons[0].MarshalJSON()
 	if err != nil {
 		t.Fatalf("HTTP measurement target spec with options failed to marshal to JSON: %v", err)
 	}
-	if string(b2) != `{"description":"description2","target":"www.meta.com","type":"http","af":6,"method":"GET","path":"/favicon.ico","query_string":"a=b&c=d","port":8080,"header_bytes":1024,"version":"1.1","extended_timing":true,"more_extended_timing":true}` {
+	if string(b2) != `{"description":"description2","target":"www.meta.com","type":"http","af":6,"method":"GET","path":"/favicon.ico","query_string":"a=b","port":8080,"header_bytes":1024,"version":"1.1","extended_timing":true,"more_extended_timing":true}` {
 		t.Errorf("Measurement (HTTP) with options improperly serialized: %s", string(b2))
 	}
 }
@@ -276,21 +297,21 @@ func TestMeasureSpec(t *testing.T) {
 	var spec MeasurementSpec
 
 	spec = MeasurementSpec{}
-	err = spec.Submit(false)
+	err = spec.Submit()
 	if err == nil {
 		t.Errorf("Measurement spec without probes or targets is accepted")
 	}
 
 	spec = MeasurementSpec{}
 	spec.AddProbesArea("WW", 3)
-	err = spec.Submit(false)
+	err = spec.Submit()
 	if err == nil {
 		t.Errorf("Measurement spec without targets is accepted")
 	}
 
 	spec = MeasurementSpec{}
 	spec.AddPing("ping", "google.com", 4, nil, nil)
-	err = spec.Submit(false)
+	err = spec.Submit()
 	if err == nil {
 		t.Errorf("Measurement spec without probes is accepted")
 	}

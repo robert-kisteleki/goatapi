@@ -7,16 +7,22 @@
 package goatapi
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
+	"io"
+	"net/http"
 	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/exp/slices"
 )
 
 // Measurement specification object, to be passed to the API
 type MeasurementSpec struct {
 	apiSpec measurementSpec
+	verbose bool
+	key     *uuid.UUID
 }
 
 type measurementSpec struct {
@@ -198,6 +204,10 @@ func NewMeasurementSpec() (spec *MeasurementSpec) {
 	spec.apiSpec.Definitons = make([]measurementTargetDefinition, 0)
 	spec.apiSpec.Probes = make([]measurementProbeDefinition, 0)
 	return spec
+}
+
+func (spec *MeasurementSpec) Verbose(verbose bool) {
+	spec.verbose = verbose
 }
 
 func (spec *MeasurementSpec) Start(time time.Time) {
@@ -636,19 +646,66 @@ func (target *measurementTargetHttp) MarshalJSON() (b []byte, e error) {
 	return json.Marshal(*target)
 }
 
-func (spec *MeasurementSpec) Submit(verbose bool) error {
-	if len(spec.apiSpec.Definitons) == 0 {
-		return fmt.Errorf("need at least 1 measurement defintion")
-	}
+// ApiKey sets the API key to be used
+// This key should have the "create_measurements" permission
+func (filter *MeasurementSpec) ApiKey(key *uuid.UUID) {
+	filter.key = key
+}
 
-	if len(spec.apiSpec.Probes) == 0 {
-		return fmt.Errorf("need at least 1 probe specification")
-	}
-
-	b, err := json.Marshal(spec.apiSpec)
+func (spec *MeasurementSpec) Submit() error {
+	post, err := spec.GetApiJson()
 	if err != nil {
 		return err
 	}
-	fmt.Printf("%s\n", string(b))
+
+	query := apiBaseURL + "measurements/"
+	req, err := http.NewRequest("POST", query, bytes.NewBuffer(post))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", uaString)
+	if spec.key != nil {
+		req.Header.Set("Authorization", "Key "+spec.key.String())
+	}
+
+	// results are paginated with next= (and previous=)
+	if spec.verbose {
+		msg := fmt.Sprintf("# API call: POST %s with content '%s'", req.URL, string(post))
+		if spec.key != nil {
+			msg += fmt.Sprintf(" (using API key %s...)", spec.key.String()[:8])
+		}
+		fmt.Println(msg)
+	}
+
+	client := &http.Client{}
+	client.Timeout = time.Second * 15
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Status:", resp.Status)
+	fmt.Println("Headers:", resp.Header)
+	fmt.Println("Body:", string(body))
+
 	return nil
+}
+
+func (spec *MeasurementSpec) GetApiJson() ([]byte, error) {
+	if len(spec.apiSpec.Definitons) == 0 {
+		return nil, fmt.Errorf("need at least 1 measurement defintion")
+	}
+
+	if len(spec.apiSpec.Probes) == 0 {
+		return nil, fmt.Errorf("need at least 1 probe specification")
+	}
+
+	return json.Marshal(spec.apiSpec)
 }

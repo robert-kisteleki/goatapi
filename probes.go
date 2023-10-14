@@ -128,9 +128,10 @@ type probeListingPage struct {
 
 // ProbeFilter struct holds specified filters and other options
 type ProbeFilter struct {
-	params url.Values
-	id     uint
-	limit  uint
+	params  url.Values
+	id      uint
+	limit   uint
+	verbose bool
 }
 
 // NewProbeFilter prepares a new probe filter object
@@ -139,6 +140,11 @@ func NewProbeFilter() *ProbeFilter {
 	filter.params = url.Values{}
 	filter.params.Add("format[datetime]", "iso-8601")
 	return &filter
+}
+
+// Verbose sets verbosity
+func (filter *ProbeFilter) Verbose(verbose bool) {
+	filter.verbose = verbose
 }
 
 // FilterID filters by a particular probe ID
@@ -324,9 +330,7 @@ func (filter *ProbeFilter) verifyFilters() error {
 }
 
 // GetProbeCount returns the count of probes by filtering
-func (filter *ProbeFilter) GetProbeCount(
-	verbose bool,
-) (
+func (filter *ProbeFilter) GetProbeCount() (
 	count uint,
 	err error,
 ) {
@@ -339,7 +343,7 @@ func (filter *ProbeFilter) GetProbeCount(
 	// counting needs application of the specified filters
 	query := apiBaseURL + "probes/?" + filter.params.Encode()
 
-	resp, err := apiGetRequest(verbose, query, nil)
+	resp, err := apiGetRequest(filter.verbose, query, nil)
 	if err != nil {
 		return 0, err
 	}
@@ -359,14 +363,13 @@ func (filter *ProbeFilter) GetProbeCount(
 // GetProbes returns a bunch of probes by filtering
 // Results (or an error) appear on a channel
 func (filter *ProbeFilter) GetProbes(
-	verbose bool,
 	probes chan AsyncProbeResult,
 ) {
 	defer close(probes)
 
 	// special case: a specific ID was "filtered"
 	if filter.id != 0 {
-		probe, err := GetProbe(verbose, filter.id)
+		probe, err := GetProbe(filter.verbose, filter.id)
 		if err != nil {
 			probes <- AsyncProbeResult{Probe{}, err}
 		}
@@ -383,7 +386,7 @@ func (filter *ProbeFilter) GetProbes(
 
 	query := apiBaseURL + "probes/?" + filter.params.Encode()
 
-	resp, err := apiGetRequest(verbose, query, nil)
+	resp, err := apiGetRequest(filter.verbose, query, nil)
 
 	// results are paginated with next= (and previous=)
 	var total uint = 0
@@ -421,7 +424,7 @@ func (filter *ProbeFilter) GetProbes(
 		}
 
 		// just follow the next link
-		resp, err = apiGetRequest(verbose, page.Next, nil)
+		resp, err = apiGetRequest(filter.verbose, page.Next, nil)
 	}
 }
 
