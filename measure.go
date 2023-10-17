@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/netip"
 	"time"
 
 	"github.com/google/uuid"
@@ -272,6 +273,14 @@ func (spec *MeasurementSpec) AddProbesReuse(msm uint, n int) error {
 	return spec.AddProbesReuseWithTags(msm, n, nil, nil)
 }
 
+func (spec *MeasurementSpec) AddProbesAsn(asn uint, n int) error {
+	return spec.AddProbesReuseWithTags(asn, n, nil, nil)
+}
+
+func (spec *MeasurementSpec) AddProbesPrefix(prefix netip.Prefix, n int) error {
+	return spec.AddProbesPrefixWithTags(prefix, n, nil, nil)
+}
+
 func (spec *MeasurementSpec) AddProbesAreaWithTags(area string, n int, tagsincl *[]string, tagsexcl *[]string) error {
 	if !slices.Contains(areas, area) {
 		return fmt.Errorf("invalid area: %v", area)
@@ -299,6 +308,17 @@ func (spec *MeasurementSpec) AddProbesReuseWithTags(msm uint, n int, tagsincl *[
 		return fmt.Errorf("measurement ID must be >1M")
 	}
 	return spec.addProbeSet("msm", fmt.Sprintf("%d", msm), n, tagsincl, tagsexcl)
+}
+
+func (spec *MeasurementSpec) AddProbesAsnWithTags(asn uint, n int, tagsincl *[]string, tagsexcl *[]string) error {
+	if asn <= 0 {
+		return fmt.Errorf("asn must be positive")
+	}
+	return spec.addProbeSet("asn", fmt.Sprintf("%d", asn), n, tagsincl, tagsexcl)
+}
+
+func (spec *MeasurementSpec) AddProbesPrefixWithTags(prefix netip.Prefix, n int, tagsincl *[]string, tagsexcl *[]string) error {
+	return spec.addProbeSet("prefix", fmt.Sprintf("%v", prefix), n, tagsincl, tagsexcl)
 }
 
 func (def *measurementTargetBase) addCommonFields(
@@ -670,7 +690,6 @@ func (spec *MeasurementSpec) Submit() error {
 		req.Header.Set("Authorization", "Key "+spec.key.String())
 	}
 
-	// results are paginated with next= (and previous=)
 	if spec.verbose {
 		msg := fmt.Sprintf("# API call: POST %s with content '%s'", req.URL, string(post))
 		if spec.key != nil {
