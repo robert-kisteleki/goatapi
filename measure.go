@@ -41,7 +41,7 @@ type measurementTargetDefinition interface {
 
 type measurementTargetBase struct {
 	Description    string    `json:"description"`
-	Target         string    `json:"target"`
+	Target         *string   `json:"target,omitempty"`
 	Type           string    `json:"type"`
 	AddressFamily  uint      `json:"af"`
 	Interval       *uint     `json:"interval,omitempty"`
@@ -331,7 +331,7 @@ func (def *measurementTargetBase) addCommonFields(
 	if description == "" {
 		return fmt.Errorf("description cannot be empty")
 	}
-	if target == "" {
+	if target == "" && typ != "dns" {
 		return fmt.Errorf("target cannot be empty")
 	}
 	if af != 4 && af != 6 {
@@ -341,7 +341,9 @@ func (def *measurementTargetBase) addCommonFields(
 	// common fields
 	def.Type = typ
 	def.Description = description
-	def.Target = target
+	if target != "" {
+		def.Target = &target
+	}
 	def.AddressFamily = af
 
 	if baseoptions != nil {
