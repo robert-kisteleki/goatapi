@@ -297,21 +297,21 @@ func TestMeasureSpec(t *testing.T) {
 	var spec MeasurementSpec
 
 	spec = MeasurementSpec{}
-	err = spec.Submit()
+	_, err = spec.Submit()
 	if err == nil {
 		t.Errorf("Measurement spec without probes or targets is accepted")
 	}
 
 	spec = MeasurementSpec{}
 	spec.AddProbesArea("WW", 3)
-	err = spec.Submit()
+	_, err = spec.Submit()
 	if err == nil {
 		t.Errorf("Measurement spec without targets is accepted")
 	}
 
 	spec = MeasurementSpec{}
 	spec.AddPing("ping", "google.com", 4, nil, nil)
-	err = spec.Submit()
+	_, err = spec.Submit()
 	if err == nil {
 		t.Errorf("Measurement spec without probes is accepted")
 	}

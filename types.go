@@ -45,10 +45,11 @@ type ErrorSource struct {
 
 // ErrorDetails type
 type ErrorDetail struct {
-	Detail string `json:"detail"`
-	Status int    `json:"status"`
-	Title  string `json:"title"`
-	Code   int    `json:"code"`
+	Detail string         `json:"detail"`
+	Status int            `json:"status"`
+	Title  string         `json:"title"`
+	Code   int            `json:"code"`
+	Errors []ErrorMessage `json:"errors"`
 }
 
 // valueOrNA turns various types into a string if they have values
@@ -110,18 +111,21 @@ func parseAPIError(resp *http.Response) error {
 		return err
 	}
 
+	r := make([]string, 0)
 	if decoded.Status != 0 {
-		r := make([]string, 0)
 		r = append(r, decoded.Title)
 		for _, e := range decoded.Errors {
 			r = append(r, e.Detail)
 		}
-		return fmt.Errorf("%d %s", decoded.Status, strings.Join(r, ", "))
 	}
 
 	if decoded.Error.Status != 0 {
-		return fmt.Errorf("%d %s", decoded.Error.Status, decoded.Error.Title)
+		r = append(r, decoded.Error.Title)
+		r = append(r, decoded.Error.Detail)
+		for _, e := range decoded.Error.Errors {
+			r = append(r, e.Detail)
+		}
 	}
 
-	return fmt.Errorf("unknown error")
+	return fmt.Errorf("%d %s %s", decoded.Status, decoded.Title, strings.Join(r, ", "))
 }

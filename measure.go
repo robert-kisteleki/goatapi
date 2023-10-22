@@ -10,7 +10,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/netip"
 	"time"
@@ -190,6 +189,10 @@ type measurementProbeDefinition struct {
 type measurementProbeDefinitionTags struct {
 	Include *[]string `json:"include,omitempty"`
 	Exclude *[]string `json:"exclude,omitempty"`
+}
+
+type MeasurementList struct {
+	Measurements []uint `json:"measurements"`
 }
 
 var areas = []string{"WW", "West", "North-Central", "South-Central", "North-East", "South-East"}
@@ -674,16 +677,16 @@ func (filter *MeasurementSpec) ApiKey(key *uuid.UUID) {
 	filter.key = key
 }
 
-func (spec *MeasurementSpec) Submit() error {
+func (spec *MeasurementSpec) Submit() (msmlist []uint, err error) {
 	post, err := spec.GetApiJson()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	query := apiBaseURL + "measurements/"
 	req, err := http.NewRequest("POST", query, bytes.NewBuffer(post))
 	if err != nil {
-		return err
+		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "application/json")
@@ -704,19 +707,24 @@ func (spec *MeasurementSpec) Submit() error {
 	client.Timeout = time.Second * 15
 	resp, err := client.Do(req)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
+	if resp.StatusCode >= 400 {
+		return nil, parseAPIError(resp)
 	}
-	fmt.Println("Status:", resp.Status)
-	fmt.Println("Headers:", resp.Header)
-	fmt.Println("Body:", string(body))
 
-	return nil
+	if resp.StatusCode == 201 {
+		var msmlist MeasurementList
+		err = json.NewDecoder(resp.Body).Decode(&msmlist)
+		if err != nil {
+			return nil, err
+		}
+		return msmlist.Measurements, nil
+	}
+
+	return nil, fmt.Errorf("unknown error")
 }
 
 func (spec *MeasurementSpec) GetApiJson() ([]byte, error) {
