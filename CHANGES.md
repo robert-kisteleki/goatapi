@@ -1,6 +1,6 @@
 # goatAPI changelog
 
-## next
+## 0.4.0
 
 * FIX: do not blow up if connection to stream fails
 * FIX: defaulted to file read if stream was turned on but no measurement ID was set
