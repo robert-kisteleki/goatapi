@@ -172,11 +172,12 @@ type measurementListingPage struct {
 
 // MeasurementFilter struct holds specified filters and other options
 type MeasurementFilter struct {
-	params url.Values
-	id     uint
-	limit  uint
-	key    *uuid.UUID
-	my     bool
+	params  url.Values
+	id      uint
+	limit   uint
+	verbose bool
+	key     *uuid.UUID
+	my      bool
 }
 
 // NewMeasurementFilter prepares a new measurement filter object
@@ -186,6 +187,11 @@ func NewMeasurementFilter() MeasurementFilter {
 	filter.params.Add("optional_fields", "probes")
 	filter.params.Add("format[datetime]", "iso-8601")
 	return filter
+}
+
+// Verbose sets verbosity
+func (filter *MeasurementFilter) Verbose(verbose bool) {
+	filter.verbose = verbose
 }
 
 // FilterID filters by a particular measurement ID
@@ -448,9 +454,7 @@ func (filter *MeasurementFilter) verifyFilters() error {
 }
 
 // GetMeasurementCount returns the count of measurements by filtering
-func (filter *MeasurementFilter) GetMeasurementCount(
-	verbose bool,
-) (
+func (filter *MeasurementFilter) GetMeasurementCount() (
 	count uint,
 	err error,
 ) {
@@ -478,7 +482,7 @@ func (filter *MeasurementFilter) GetMeasurementCount(
 	}
 
 	// results are paginated with next= (and previous=)
-	if verbose {
+	if filter.verbose {
 		msg := fmt.Sprintf("# API call: GET %s", req.URL)
 		if filter.key != nil {
 			msg += fmt.Sprintf(" (using API key %s...)", filter.key.String()[:8])
@@ -506,14 +510,13 @@ func (filter *MeasurementFilter) GetMeasurementCount(
 // GetMeasurements returns a bunch of measurements by filtering
 // Results (or an error) appear on a channel
 func (filter *MeasurementFilter) GetMeasurements(
-	verbose bool,
 	measurements chan AsyncMeasurementResult,
 ) {
 	defer close(measurements)
 
 	// special case: a specific ID was "filtered"
 	if filter.id != 0 {
-		msm, err := GetMeasurement(verbose, filter.id, filter.key)
+		msm, err := GetMeasurement(filter.verbose, filter.id, filter.key)
 		if err != nil {
 			measurements <- AsyncMeasurementResult{Measurement{}, err}
 			return
@@ -535,7 +538,7 @@ func (filter *MeasurementFilter) GetMeasurements(
 	}
 	query += "?" + filter.params.Encode()
 
-	resp, err := apiGetRequest(verbose, query, filter.key)
+	resp, err := apiGetRequest(filter.verbose, query, filter.key)
 
 	var total uint = 0
 	// results are paginated with next= (and previous=)
@@ -574,7 +577,7 @@ func (filter *MeasurementFilter) GetMeasurements(
 		}
 
 		// just follow the next link
-		resp, err = apiGetRequest(verbose, page.Next, filter.key)
+		resp, err = apiGetRequest(filter.verbose, page.Next, filter.key)
 	}
 }
 

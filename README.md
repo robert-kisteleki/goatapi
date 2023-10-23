@@ -8,6 +8,7 @@ It supports:
 * finding probes
 * finding anchors
 * finding measurements
+* scheduling new measurements
 * downloading results of measurements and turning them into Go objects
 * tuning in to result streaming and turning them into Go objects
 * loading a local file containing measurement results and turning them into Go objects
@@ -222,9 +223,75 @@ The `result` package contains various types to hold corresponding measurement re
 * `BaseResult` is the basis of all and contains the basic fields such as `MeasurementID`, `ProbeId`, `TimeStamp`, `Type` and such
 * `PingResult`, `TracerouteResult`, `DnsResult` etc. contain the type-specific fields
 
+## Measurement Scheduling
+
+You can schedule measuements with virtually all available API options. A quick example:
+
+```go
+	spec := goatapi.NewMeasurementSpec()
+	spec.ApiKey(myapikey)
+
+	include := []string{"system-v4"}
+	exclude := []string{"badtag", "anotherbad"}
+	spec.AddProbesAreaWithTags("ww", 10, &include, &exclude)
+	spec.AddProbesList([]uint{1, 99, 999})
+	spec.AddProbesCountry("NL", 15)
+	spec.AddProbesPrefix(netip.MustParsePrefix("192.0.0.0/8"), 5)
+
+	spec.Start(tomorrownoon)
+	spec.OneOff(true)
+
+	spec.AddTrace(
+		"my traceroute measurement",
+		"ping.ripe.net",
+		4,
+		&goatapi.BaseOptions{ResolveOnProbe: true},
+		&goatapi.TraceOptions{FirstHop: 4, ParisId: 9},
+	)
+
+	msmid, err := spec.Submit()
+	if err != nil {
+		// use msmid
+	}
+```
+
+### Basics
+
+A new measuement object can be created with `NewMeasurementSpec()`. In order to successfully submit this to the API, you need to add an API key using `ApiKey()`. It also needs to contain at least one probe definition and at least one measurement definition.
+
+### Probe Definitions
+
+All variations of probe selection are supported:
+* `AddProbesArea()` and `AddProbesAreaWithTags()` to add probes from an area (_WW_, _West_, ...)
+* `AddProbesCountry()` and `AddProbesCountryWithTags()` to add probes from an country specified by its country code (ISO 3166-1 alpha-2)
+* `AddProbesReuse()` and `AddProbesReuseWithTags()` to reuse probes from a previous measurement
+* `AddProbesAsn()` and `AddProbesAsnWithTags()` to add probes from an ASN
+* `AddProbesPrefix()` and `AddProbesPrefixWithTags()` to add probes from a prefix (IPv4 or IPv6)
+* `AddProbesList()` and `AddProbesListWithTags()` to add probes with explicit probe IDs
+
+Probe tags can be specified to include or exclude ones that have those specific tags.
+
+### Time Definitions
+
+You can specify whether you want a one-off or an ongoing measurement using `Oneoff()`.
+
+Each measurement can have an explicit start time defined with `Start()`. Ongoing measurements can also have a predefined stop time with `Stop()`. These have to be sane regarding the current time (they need to be in the future) and to each other (stop needs to happen after start). By default start time is as soon as possible with an undefined end time.
+
+### Measurement Definitions
+
+Various measurements can be added with `AddPing()`, `AddTrace()`, `AddDns()`, `AddTls()`, `AddNtp()` and `AddHttp()`. Multiple measurements can be added to one specification; in this case they will use the same probes and timing.
+
+All measurement types support setting common options using a `BaseOptions{}` structure. You can set the measurement interval, spread, the resolve-on-probe flag and so on here. If you are ok with the API defaults then you can leave this parameter to be `nil`.
+
+All measurement types also accept type-specific options via the structures `PingOptions{}`, `TraceOptions{}`, `DnsOptions{}` and so on. If you are ok with the API defaults then you can leave this parameter to be `nil` as well.
+
+### Submitting a Measurement Specification to the API
+
+The `Submit()` function POSTs the whole specifiaton to the API. It either returns with an `error` or a list of recently created measurement IDs. In case you're only intrested in the API-compatible JSON structure without submitting it, then `GetApiJson()` should be called instead.
+
 # Future Additions / TODO
 
-* schedule a new measurement, stop existing measurements
+* stop existing measurements
 * modify participants of an existing measurement (add/remove probes)
 * check credit balance, transfer credits, ...
 

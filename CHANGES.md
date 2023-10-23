@@ -8,6 +8,9 @@
 * FIX: (ping parser) min/avg/max were not reported correctly if they were not present but could otherwise be calculated
 * FIX: typo in ErrorDetail JSON "detail"
 * NEW: support for measurement status checks
+* CHANGED: verbosity is now a setting, not a parameter
+* CHANGED: ErrorDetail can have embedded error messages
+* NEW: support for measurement scheduling with probe selection, timing, all measurement types and options
 
 ## 0.3.0
 
