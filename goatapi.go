@@ -14,7 +14,7 @@ import (
 	"github.com/google/uuid"
 )
 
-const version = "v0.4.1"
+const version = "v0.4.2"
 
 var uaString = "goatAPI " + version
 var apiBaseURL = "https://atlas.ripe.net/api/v2/"

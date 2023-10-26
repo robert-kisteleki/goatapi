@@ -1,5 +1,9 @@
 # goatAPI changelog
 
+## 0.4.2
+
+* no changes, adminstrative release only
+
 ## 0.4.1
 
 * FIX: handle dnserrors in TLS results
