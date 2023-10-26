@@ -104,7 +104,7 @@ func (trace *TracerouteResult) Parse(from string) (err error) {
 				continue
 			}
 			if ihopdata.ErrorCode != nil {
-				hopdata.ErrorCode = *ihopdata.ErrorCode
+				hopdata.ErrorCode = fmt.Sprint(*ihopdata.ErrorCode)
 			}
 			hopdata.From = ihopdata.From
 			if ihopdata.ITypeOfService != nil {
@@ -209,10 +209,30 @@ type rawTraceHop struct {
 	HopData   *[]rawTraceHopData `json:"result"` //
 }
 
+type errorCode string
+
+func (e *errorCode) UnmarshalJSON(b []byte) error {
+	var val any
+	if err := json.Unmarshal(b, &val); err != nil {
+		return err
+	}
+	switch v := val.(type) {
+	case int:
+		*e = errorCode(fmt.Sprintf("%v", v))
+	case float64:
+		*e = errorCode(fmt.Sprintf("%d", int(v)))
+	case string:
+		*e = errorCode(v)
+	default:
+		return fmt.Errorf("unexpected error code with type %T and value %v", v, v)
+	}
+	return nil
+}
+
 // one hop detail
 type rawTraceHopData struct {
 	Timeout          *string           `json:"x"`          //
-	ErrorCode        *string           `json:"err"`        // N/H/A/P/p/h/(int)
+	ErrorCode        *errorCode        `json:"err"`        // N/H/A/P/p/h/(int)
 	From             netip.Addr        `json:"from"`       //
 	ITypeOfService   *uint             `json:"itos"`       //
 	ITtl             *uint             `json:"ittl"`       //
