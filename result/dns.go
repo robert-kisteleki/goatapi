@@ -174,7 +174,7 @@ var DnsRcodeNames = map[int]string{
 	DnsRcodeNOERR:     "NOERR",
 	DnsRcodeFORMERR:   "FORMERR",
 	DnsRcodeSERVFAIL:  "SERVFAIL",
-	DnsRcodeNXDOMAIN:  "NXSOMAIN",
+	DnsRcodeNXDOMAIN:  "NXDOMAIN",
 	DnsRcodeNOTIMP:    "NOTIMP",
 	DnsRcodeREFUSED:   "REFUSED",
 	DnsRcodeNOTAUTH:   "NOAUTH",
