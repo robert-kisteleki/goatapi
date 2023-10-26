@@ -1,5 +1,12 @@
 # goatAPI changelog
 
+## 0.4.1
+
+* FIX: handle dnserrors in TLS results
+* FIX: traceroute numerical errors in hops were not handled properly
+* CHANGED: fix typos
+* CHANGED: improve stream EOF handling
+
 ## 0.4.0
 
 * FIX: do not blow up if connection to stream fails
