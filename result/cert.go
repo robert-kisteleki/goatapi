@@ -24,6 +24,7 @@ type CertResult struct {
 	ServerCipher    string             //
 	ProtocolVersion string             //
 	Certificates    []x509.Certificate //
+	DnsError        string             //
 }
 
 // CertAlert is an error that could be sent by the server
@@ -55,15 +56,22 @@ func (cert *CertResult) Parse(from string) (err error) {
 	cert.Alert = icert.Alert
 	cert.Error = icert.Error
 	if icert.Error == nil {
-		cert.Method = *icert.Method
-		cert.ReplyTime = *icert.ReplyTime
-		cert.ServerCipher = *icert.ServerCipher
-		cert.ConnectTime = *icert.ConnectTime
-		cert.ReplyTime = *icert.ReplyTime
-		cert.ProtocolVersion = *icert.ProtocolVersion
-		cert.Certificates, err = icert.Certificates()
-		if err != nil {
-			return nil
+		if icert.DnsError != nil {
+			cert.DnsError = *icert.DnsError
+		} else {
+			// we use dnserror as a hint that there's no real data
+			cert.Method = *icert.Method
+			cert.ReplyTime = *icert.ReplyTime
+			cert.ConnectTime = *icert.ConnectTime
+			// if there's an alert, there's no other real data
+			if icert.Alert == nil {
+				cert.ServerCipher = *icert.ServerCipher
+				cert.ProtocolVersion = *icert.ProtocolVersion
+				cert.Certificates, err = icert.Certificates()
+				if err != nil {
+					return nil
+				}
+			}
 		}
 	}
 
@@ -83,6 +91,7 @@ type certResult struct {
 	ProtocolVersion *string    `json:"ver"`           //
 	Error           *string    `json:"err"`           //
 	RawCertificates *[]string  `json:"cert"`          //
+	DnsError        *string    `json:"dnserr"`        //
 }
 
 func (result *certResult) Certificates() (list []x509.Certificate, err error) {
