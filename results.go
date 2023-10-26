@@ -241,7 +241,7 @@ func (filter *ResultsFilter) streamReceiveHandler(
 	for {
 		_, msg, err := connection.ReadMessage()
 		if err != nil {
-			err := fmt.Errorf("error reading from stream: %v", string(msg))
+			err := fmt.Errorf("error reading from stream: %v", err)
 			results <- result.AsyncResult{Result: nil, Error: err}
 			return
 		}
