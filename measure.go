@@ -214,12 +214,12 @@ func (spec *MeasurementSpec) Verbose(verbose bool) {
 	spec.verbose = verbose
 }
 
-func (spec *MeasurementSpec) Start(time time.Time) {
+func (spec *MeasurementSpec) StartTime(time time.Time) {
 	t := uniTime(time)
 	spec.apiSpec.Start = &t
 }
 
-func (spec *MeasurementSpec) Stop(time time.Time) {
+func (spec *MeasurementSpec) StopTime(time time.Time) {
 	t := uniTime(time)
 	spec.apiSpec.Stop = &t
 }
@@ -737,4 +737,40 @@ func (spec *MeasurementSpec) GetApiJson() ([]byte, error) {
 	}
 
 	return json.Marshal(spec.apiSpec)
+}
+
+func (spec *MeasurementSpec) Stop(msmID uint) error {
+	query := fmt.Sprintf("%smeasurements/%d/", apiBaseURL, msmID)
+	req, err := http.NewRequest("DELETE", query, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", uaString)
+	if spec.key != nil {
+		req.Header.Set("Authorization", "Key "+spec.key.String())
+	}
+
+	if spec.verbose {
+		msg := fmt.Sprintf("# API call: DELETE %s ", req.URL)
+		if spec.key != nil {
+			msg += fmt.Sprintf(" (using API key %s...)", spec.key.String()[:8])
+		}
+		fmt.Println(msg)
+	}
+
+	client := &http.Client{}
+	client.Timeout = time.Second * 15
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return parseAPIError(resp)
+	}
+
+	return nil
 }
