@@ -31,7 +31,7 @@ type measurementSpec struct {
 	OneOff     bool                          `json:"is_oneoff"`
 	BillTo     *string                       `json:"bill_to,omitempty"`
 	Start      *uniTime                      `json:"start_time,omitempty"`
-	Stop       *uniTime                      `json:"stop_time,omitempty"`
+	End        *uniTime                      `json:"stop_time,omitempty"`
 }
 
 type measurementTargetDefinition interface {
@@ -219,9 +219,9 @@ func (spec *MeasurementSpec) StartTime(time time.Time) {
 	spec.apiSpec.Start = &t
 }
 
-func (spec *MeasurementSpec) StopTime(time time.Time) {
+func (spec *MeasurementSpec) EndTime(time time.Time) {
 	t := uniTime(time)
-	spec.apiSpec.Stop = &t
+	spec.apiSpec.End = &t
 }
 
 func (spec *MeasurementSpec) OneOff(oneoff bool) {
@@ -672,12 +672,12 @@ func (target *measurementTargetHttp) MarshalJSON() (b []byte, e error) {
 }
 
 // ApiKey sets the API key to be used
-// This key should have the "create_measurements" permission
+// This key should have the required permission (create or stop)
 func (filter *MeasurementSpec) ApiKey(key *uuid.UUID) {
 	filter.key = key
 }
 
-func (spec *MeasurementSpec) Submit() (msmlist []uint, err error) {
+func (spec *MeasurementSpec) Schedule() (msmlist []uint, err error) {
 	post, err := spec.GetApiJson()
 	if err != nil {
 		return nil, err

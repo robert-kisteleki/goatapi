@@ -1,5 +1,11 @@
 # goatAPI changelog
 
+## next
+
+* CHANGED: renamed `Start()` and `Stop()` to `StartTime()` and `EndTime()`
+* CHANGED: renamed `Submit()` to `Schedule()`
+* NEW: support for stopping measurements via `MeasurementSpec.Stop()`
+
 ## 0.4.2
 
 * no changes, adminstrative release only

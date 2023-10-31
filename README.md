@@ -8,11 +8,10 @@ It supports:
 * finding probes
 * finding anchors
 * finding measurements
-* scheduling new measurements
+* scheduling new measurements, stop existing ones
 * downloading results of measurements and turning them into Go objects
 * tuning in to result streaming and turning them into Go objects
 * loading a local file containing measurement results and turning them into Go objects
-* (more features to come)
 
 The tool needs Go 1.18 to compile.
 
@@ -238,7 +237,7 @@ You can schedule measuements with virtually all available API options. A quick e
 	spec.AddProbesCountry("NL", 15)
 	spec.AddProbesPrefix(netip.MustParsePrefix("192.0.0.0/8"), 5)
 
-	spec.Start(tomorrownoon)
+	spec.StartTime(tomorrownoon)
 	spec.OneOff(true)
 
 	spec.AddTrace(
@@ -249,7 +248,7 @@ You can schedule measuements with virtually all available API options. A quick e
 		&goatapi.TraceOptions{FirstHop: 4, ParisId: 9},
 	)
 
-	msmid, err := spec.Submit()
+	msmid, err := spec.Schedule()
 	if err != nil {
 		// use msmid
 	}
@@ -275,7 +274,7 @@ Probe tags can be specified to include or exclude ones that have those specific 
 
 You can specify whether you want a one-off or an ongoing measurement using `Oneoff()`.
 
-Each measurement can have an explicit start time defined with `Start()`. Ongoing measurements can also have a predefined stop time with `Stop()`. These have to be sane regarding the current time (they need to be in the future) and to each other (stop needs to happen after start). By default start time is as soon as possible with an undefined end time.
+Each measurement can have an explicit start time defined with `StartTime()`. Ongoing measurements can also have a predefined end time with `EndTime()`. These have to be sane regarding the current time (they need to be in the future) and to each other (end needs to happen after start). By default start time is as soon as possible with an undefined end time.
 
 ### Measurement Definitions
 
@@ -287,11 +286,25 @@ All measurement types also accept type-specific options via the structures `Ping
 
 ### Submitting a Measurement Specification to the API
 
-The `Submit()` function POSTs the whole specifiaton to the API. It either returns with an `error` or a list of recently created measurement IDs. In case you're only intrested in the API-compatible JSON structure without submitting it, then `GetApiJson()` should be called instead.
+The `Schedule()` function POSTs the whole specifiaton to the API. It either returns with an `error` or a list of recently created measurement IDs. In case you're only intrested in the API-compatible JSON structure without submitting it, then `GetApiJson()` should be called instead.
+
+
+## Stopping a Measurement
+
+You can stop a measuement via:
+
+```go
+	spec := goatapi.NewMeasurementSpec()
+	spec.ApiKey(myapikey)
+
+	err := spec.Stop(msmID)
+	if err != nil {
+		// done
+	}
+```
 
 # Future Additions / TODO
 
-* stop existing measurements
 * modify participants of an existing measurement (add/remove probes)
 * check credit balance, transfer credits, ...
 
