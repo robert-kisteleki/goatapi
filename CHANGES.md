@@ -5,6 +5,7 @@
 * CHANGED: renamed `Start()` and `Stop()` to `StartTime()` and `EndTime()`
 * CHANGED: renamed `Submit()` to `Schedule()`
 * NEW: support for stopping measurements via `MeasurementSpec.Stop()`
+* NEW: support for adding or removing probes to/from existing measurements via `MeasurementSpec.ParticipationRequest()`
 
 ## 0.4.2
 
