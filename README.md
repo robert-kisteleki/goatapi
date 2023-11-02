@@ -286,8 +286,15 @@ All measurement types also accept type-specific options via the structures `Ping
 
 ### Submitting a Measurement Specification to the API
 
-The `Schedule()` function POSTs the whole specifiaton to the API. It either returns with an `error` or a list of recently created measurement IDs. In case you're only intrested in the API-compatible JSON structure without submitting it, then `GetApiJson()` should be called instead.
+The `Schedule()` function POSTs the whole specification to the API. It either returns with an `error` or a list of recently created measurement IDs. In case you're only interested in the API-compatible JSON structure without submitting it, then `GetApiJson()` should be called instead.
 
+## Adding and Removing Probes
+
+One can ask for more probes to be added to a measurement, or existing ones to be removed. While the API itself can do both in one call, goatAPI only supports either additions or removals in one query. In order to add or remove probes, the same `AddProbesX()` functions can be used to specify the probe set, then `ParticipationRequest(id, add)` is used with either `add=true` to add or `add=false` to remove probes. Note that for the remove function only an explicit probe list (`AddProbesList()`) can be used in the API.
+
+In order to successfully submit this to the API, you need to add an API key beforehand using `ApiKey()`.
+
+The return value of this function is a list of _participation request IDs_ or an error.
 
 ## Stopping a Measurement
 

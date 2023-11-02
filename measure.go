@@ -774,3 +774,89 @@ func (spec *MeasurementSpec) Stop(msmID uint) error {
 
 	return nil
 }
+
+// ParticipationRequest is used to add or remove probes to/from existing measurement
+// the actual probe specification on what to add or remove comes
+// in the form of measurementProbeDefinition objects in the specification
+func (spec *MeasurementSpec) ParticipationRequest(msmID uint, add bool) ([]uint, error) {
+	type measurementParticipationRequest struct {
+		Action    string    `json:"action"` // "add" or "remove"
+		Requested uint      `json:"requested"`
+		Type      string    `json:"type"`
+		Value     string    `json:"value"`
+		Include   *[]string `json:"include,omitempty"`
+		Exclude   *[]string `json:"exclude,omitempty"`
+	}
+	type measurementParticipationResponse struct {
+		RequestIds []uint `json:"request_ids"`
+	}
+	if len(spec.apiSpec.Probes) == 0 {
+		return nil, fmt.Errorf("need at least 1 probe specification")
+	}
+
+	plist := make([]measurementParticipationRequest, 0)
+	for _, pspec := range spec.apiSpec.Probes {
+		action := "add"
+		if !add {
+			action = "remove"
+			if pspec.Type != "probes" {
+				return nil, fmt.Errorf("probe removal only accepts an explicit probe list")
+			}
+		}
+		mpr := measurementParticipationRequest{
+			Action:    action,
+			Requested: uint(pspec.Requested),
+			Type:      pspec.Type,
+			Value:     pspec.Value,
+		}
+		if pspec.Tags != nil {
+			mpr.Include = pspec.Tags.Include
+			mpr.Exclude = pspec.Tags.Exclude
+		}
+		plist = append(plist, mpr)
+	}
+
+	query := fmt.Sprintf("%smeasurements/%d/participation-requests/", apiBaseURL, msmID)
+	post, err := json.Marshal(plist)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", query, bytes.NewBuffer(post))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", uaString)
+	if spec.key != nil {
+		req.Header.Set("Authorization", "Key "+spec.key.String())
+	}
+
+	if spec.verbose {
+		msg := fmt.Sprintf("# API call: POST %s with content '%s'", req.URL, string(post))
+		if spec.key != nil {
+			msg += fmt.Sprintf(" (using API key %s...)", spec.key.String()[:8])
+		}
+		fmt.Println(msg)
+	}
+
+	client := &http.Client{}
+	client.Timeout = time.Second * 15
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		return nil, parseAPIError(resp)
+	}
+
+	var ids measurementParticipationResponse
+	err = json.NewDecoder(resp.Body).Decode(&ids)
+	if err != nil {
+		return nil, err
+	}
+	return ids.RequestIds, nil
+}
