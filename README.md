@@ -9,6 +9,7 @@ It supports:
 * finding anchors
 * finding measurements
 * scheduling new measurements, stop existing ones
+* modify participants of an existing measurement (add/remove probes)
 * downloading results of measurements and turning them into Go objects
 * tuning in to result streaming and turning them into Go objects
 * loading a local file containing measurement results and turning them into Go objects
@@ -312,7 +313,6 @@ You can stop a measuement via:
 
 # Future Additions / TODO
 
-* modify participants of an existing measurement (add/remove probes)
 * check credit balance, transfer credits, ...
 
 # Copyright, Contributing

@@ -2,6 +2,9 @@
 
 ## next
 
+
+## 0.5.0
+
 * CHANGED: renamed `Start()` and `Stop()` to `StartTime()` and `EndTime()`
 * CHANGED: renamed `Submit()` to `Schedule()`
 * NEW: support for stopping measurements via `MeasurementSpec.Stop()`
