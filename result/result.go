@@ -18,6 +18,7 @@ type Result interface {
 	TypeName() string
 	GetTimeStamp() time.Time
 	GetProbeID() uint
+	GetFirmwareVersion() uint
 }
 
 type AsyncResult struct {
@@ -30,6 +31,9 @@ func Parse(from string) (Result, error) {
 	err := res.Parse(from)
 	if err != nil {
 		return nil, err
+	}
+	if res.GetFirmwareVersion() <= 1 {
+		return nil, fmt.Errorf("firmware version 1 and below results are not supported")
 	}
 	return ParseWithTypeHint(from, res.TypeName())
 }
