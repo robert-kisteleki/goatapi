@@ -11,6 +11,48 @@ import (
 	"testing"
 )
 
+// Test firmware parsing as int
+func TestFirmwareAsInt(t *testing.T) {
+	var base BaseResult
+	err := base.Parse(`
+{
+"fw":1,
+"af":4,
+"dst_addr":"193.0.14.129",
+"from":"99.99.99.99",
+"msm_id":10101,
+"prb_id":9999,
+"src_addr":"88.88.88.88",
+"timestamp":1451606452,
+"type":"dns"
+}
+`)
+	if err != nil || base.GetFirmwareVersion() != 1 {
+		t.Fatalf("firmware version as int should be accepted correctly")
+	}
+}
+
+// Test firmware parsing as int
+func TestFirmwareAsString(t *testing.T) {
+	var base BaseResult
+	err := base.Parse(`
+{
+"fw":"1234",
+"af":4,
+"dst_addr":"193.0.14.129",
+"from":"99.99.99.99",
+"msm_id":10101,
+"prb_id":9999,
+"src_addr":"88.88.88.88",
+"timestamp":1451606452,
+"type":"dns"
+}
+`)
+	if err != nil || base.GetFirmwareVersion() != 1234 {
+		t.Fatalf("firmware version as string should be accepted correctly")
+	}
+}
+
 // Test if the base parser does a decent job
 func TestBaseParser(t *testing.T) {
 	var base BaseResult
