@@ -39,7 +39,7 @@ func TestBaseParser(t *testing.T) {
 		t.Fatalf("Error parsing base result: %s", err)
 	}
 
-	assertEqual(t, base.FirmwareVersion, uint(1234), "error parsing base field value for fw")
+	assertEqual(t, base.GetFirmwareVersion(), uint(1234), "error parsing base field value for fw")
 	assertEqual(t, base.LastTimeSync, -1, "error parsing base field value for lts")
 	assertEqual(t, base.DestinationName, "example.com", "error parsing base field value for dst_name")
 	dst, _ := netip.ParseAddr("192.0.2.1")
