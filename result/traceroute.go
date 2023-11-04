@@ -30,6 +30,7 @@ type TracerouteHop struct {
 }
 
 type TraceRouteHopData struct {
+	Error            *string         //
 	Timeout          bool            //
 	ErrorCode        string          // N/H/A/P/p/h/(int)
 	From             netip.Addr      //
@@ -101,32 +102,36 @@ func (trace *TracerouteResult) Parse(from string) (err error) {
 			if ihopdata.Timeout != nil {
 				hopdata.Timeout = true
 				hop.Responses = append(hop.Responses, hopdata)
-				continue
+				continue // on timeout: no useful data
+			}
+			if ihopdata.Error != nil {
+				hopdata.Error = ihopdata.Error
+				hop.Responses = append(hop.Responses, hopdata)
+				continue // on error: no useful data
 			}
 			if ihopdata.ErrorCode != nil {
 				hopdata.ErrorCode = fmt.Sprint(*ihopdata.ErrorCode)
 			}
 			hopdata.From = ihopdata.From
-			if ihopdata.ITypeOfService != nil {
-				hopdata.ITypeOfService = ihopdata.ITypeOfService
+			hopdata.Size = *ihopdata.Size
+			hopdata.Ttl = *ihopdata.Ttl
+			if ihopdata.Late != nil {
+				hopdata.Late = ihopdata.Late
+				continue // no other data is it was a LATE packet
 			}
+			hopdata.Rtt = *ihopdata.Rtt
 			if ihopdata.ITtl != nil {
 				hopdata.ITtl = ihopdata.ITtl
+			}
+			if ihopdata.ITypeOfService != nil {
+				hopdata.ITypeOfService = ihopdata.ITypeOfService
 			}
 			if ihopdata.ErrorDestination != nil {
 				hopdata.ErrorDestination = ihopdata.ErrorDestination
 			}
-			if ihopdata.Late != nil {
-				hopdata.Late = ihopdata.Late
-			}
 			if ihopdata.Mtu != nil {
 				hopdata.Mtu = ihopdata.Mtu
 			}
-			if ihopdata.Rtt != nil {
-				hopdata.Rtt = *ihopdata.Rtt
-			}
-			hopdata.Size = *ihopdata.Size
-			hopdata.Ttl = *ihopdata.Ttl
 			if ihopdata.Flags != nil {
 				hopdata.Flags = ihopdata.Flags
 			}
@@ -232,6 +237,7 @@ func (e *errorCode) UnmarshalJSON(b []byte) error {
 // one hop detail
 type rawTraceHopData struct {
 	Timeout          *string           `json:"x"`          //
+	Error            *string           `json:"error"`      //
 	ErrorCode        *errorCode        `json:"err"`        // N/H/A/P/p/h/(int)
 	From             netip.Addr        `json:"from"`       //
 	ITypeOfService   *uint             `json:"itos"`       //
