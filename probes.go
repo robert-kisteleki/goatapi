@@ -12,9 +12,8 @@ import (
 	"net/netip"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
-
-	"golang.org/x/exp/slices"
 )
 
 // Probe object, as it comes from the API

@@ -12,10 +12,10 @@ import (
 	"fmt"
 	"net/http"
 	"net/netip"
+	"slices"
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/exp/slices"
 )
 
 // Measurement specification object, to be passed to the API

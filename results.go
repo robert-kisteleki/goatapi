@@ -11,12 +11,12 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/robert-kisteleki/goatapi/result"
-	"golang.org/x/exp/slices"
 )
 
 // ResultsFilter struct holds specified filters and other options

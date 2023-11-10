@@ -5,6 +5,7 @@
 * FIX: traceroute hop details can have 'error' instad of actual data
 * CHANGED: firmware version 1 results are not supported
 * FIX: improved handling of some old results which encode firmware as string
+* CHANGED: update to go 1.21 and module updates to newest
 
 ## 0.5.0
 

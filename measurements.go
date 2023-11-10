@@ -13,11 +13,11 @@ import (
 	"net/netip"
 	"net/url"
 	"regexp"
+	"slices"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
-	"golang.org/x/exp/slices"
 )
 
 // Measurement object, as it comes from the API
