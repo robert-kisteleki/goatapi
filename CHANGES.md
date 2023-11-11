@@ -6,6 +6,7 @@
 * CHANGED: firmware version 1 results are not supported
 * FIX: improved handling of some old results which encode firmware as string
 * CHANGED: update to go 1.21 and module updates to newest
+* CHANGED: added NSID parsing in DNS responses
 
 ## 0.5.0
 

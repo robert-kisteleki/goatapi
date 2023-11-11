@@ -8,6 +8,7 @@ package result
 
 import (
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net/netip"
@@ -42,11 +43,12 @@ type DnsResponse struct {
 	ResponseSize  uint           //
 
 	// overview
-	QueryID         uint //
-	QueriesCount    uint //
-	AnswerCount     uint //
-	NameServerCount uint //
-	AdditionalCount uint //
+	QueryID         uint   //
+	QueriesCount    uint   //
+	AnswerCount     uint   //
+	NameServerCount uint   //
+	AdditionalCount uint   //
+	Edsn0Nsid       []byte //
 
 	// various bits
 	Response           bool //
@@ -448,6 +450,13 @@ func makeDnsResponse(
 				rdata = rtype.String()
 			case *dns.TXT:
 				rdata = strings.Join(rtype.Txt, ", ")
+			case *dns.OPT:
+				for _, opt := range rtype.Option {
+					switch o := opt.(type) {
+					case *dns.EDNS0_NSID:
+						de.Edsn0Nsid = decodeNsid(o.Nsid)
+					}
+				}
 			}
 			list = append(list,
 				DnsAnswer{
@@ -483,4 +492,14 @@ func makeDnsResponse(
 	}
 
 	return
+}
+
+func decodeNsid(hexin string) []byte {
+	src := []byte(hexin)
+	nsid := make([]byte, hex.DecodedLen(len(src)))
+	n, err := hex.Decode(nsid, src)
+	if err != nil {
+		return nil
+	}
+	return nsid[:n]
 }
