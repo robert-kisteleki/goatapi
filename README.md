@@ -5,16 +5,14 @@ using [Golang](https://go.dev/). It is similar to [Cousteau](https://github.com/
 [Sagan](https://github.com/RIPE-NCC/ripe-atlas-sagan) combined.
 
 It supports:
-* finding probes
-* finding anchors
-* finding measurements
+* finding probes, anchors and measurements
 * scheduling new measurements, stop existing ones
 * modify participants of an existing measurement (add/remove probes)
 * downloading results of measurements and turning them into Go objects
 * tuning in to result streaming and turning them into Go objects
 * loading a local file containing measurement results and turning them into Go objects
 
-The tool needs Go 1.18 to compile.
+The tool needs Go 1.21 to compile.
 
 # Context
 

@@ -2,11 +2,13 @@
 
 ## next
 
-* FIX: traceroute hop details can have 'error' instad of actual data
+## 0.6.0
+
+* FIX: traceroute hop details can have 'error' instead of actual data
 * CHANGED: firmware version 1 results are not supported
-* FIX: improved handling of some old results which encode firmware as string
+* FIX: improved handling of some old results which encode firmware version as string
 * CHANGED: update to go 1.21 and module updates to newest
-* CHANGED: added NSID parsing in DNS responses
+* NEW: added NSID parsing in DNS responses
 
 ## 0.5.0
 
