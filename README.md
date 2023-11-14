@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> This repository has been merged together with goatAPI into [goat](https://github.com/robert-kisteleki/goat/) and will no longer be maintained.
+
 # goatapi - Go (RIPE) Atlas Tools - API Library
 
 goatapi is a Go package to interact with [RIPE Atlas](https://atlas.ripe.net/) [APIs](https://atlas.ripe.net/api/v2/)
