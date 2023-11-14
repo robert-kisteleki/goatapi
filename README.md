@@ -1,5 +1,5 @@
 > [!IMPORTANT]
-> This repository has been merged together with goatAPI into [goat](https://github.com/robert-kisteleki/goat/) and will no longer be maintained.
+> This repository has been merged together with goatCLI into [goat](https://github.com/robert-kisteleki/goat/) and will no longer be maintained.
 
 # goatapi - Go (RIPE) Atlas Tools - API Library
 
